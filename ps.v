@@ -24,6 +24,8 @@ Print e.
 
 Check e.
 
+(*------------------------------------------------------------------------------------------------*)
+(*https://stackoverflow.com/questions/56201111/what-is-the-standard-cartesian-product-construction-for-ensemble*)
 Definition prod_cart (U V : Type) (A : Ensemble U) (B : Ensemble V) 
   : Ensemble (U * V)
   := fun x => In _ A (fst x) /\ In _ B (snd x).
@@ -37,10 +39,14 @@ split.
 - now apply HU.
 - now apply HV.
 Qed.
+(*------------------------------------------------------------------------------------------------*)
+
 
 (*Definition DxT: Ensemble data_value -> Ensemble nat -> Ensemble data_value*Ensemble nat := fun D T => (D,T).*)
 
-Definition DxT: Ensemble(data_value*nat) := prod_cart (data_value)(nat)(D:Ensemble data_value)(T: Ensemble nat).
+Definition DxT
+  : Ensemble(data_value*nat)
+  := prod_cart (data_value)(nat)(D:Ensemble data_value)(T: Ensemble nat).
 
 Definition e_as_Ensemble (e:data_value*nat) := fun e => Ensemble e.
 
@@ -50,11 +56,11 @@ Check prod_cart.
 
 Print prod_cart.
 
-Definition E_included_DxT (E:Ensemble(data_value*nat))(DxT:prod_cart(data_value)(nat)(D: Ensemble data_value)(T: Ensemble nat))
+Definition E_included_DxT
+           (E:Ensemble(data_value*nat))
+           (DxT:prod_cart (data_value)(nat)(D: Ensemble data_value)(T: Ensemble nat))
   : Prop
   := E ⊆ DxT.
-
-Definition e_in_E := e ∈ E.
 
 
 
