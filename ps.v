@@ -56,13 +56,15 @@ Check prod_cart.
 
 Print prod_cart.
 
+
 Definition E_included_DxT
            (E:Ensemble(data_value*nat))
-           (DxT:prod_cart (data_value)(nat)(D: Ensemble data_value)(T: Ensemble nat))
+           (*(DxT:prod_cart (data_value)(nat)(D: Ensemble data_value)(T: Ensemble nat))*)
   : Prop
   := E ⊆ DxT.
 
-
+Print E_included_DxT.
+Check E_included_DxT.
 
 
 
