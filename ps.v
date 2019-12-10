@@ -42,7 +42,7 @@ Definition DxT
   := prod_cart (data_value)(nat)(D)(T).
 
 (*actually needed?*)
-Definition e_as_Ensemble (e:data_value*nat) := fun e => Ensemble e.
+Definition e_as_Singleton (e:data_value*nat) := fun e => Singleton e.
 
 Definition e_in_E (e:data_value*nat) :=  e ∈ E.
 
@@ -59,14 +59,15 @@ Definition event_buffer_pair_of_pointers
   : nat -> nat -> nat*nat
   := fun b_read b_write => (b_read, b_write).
 
-Definition ebuffer_pointers_to_ensemble
+Definition pointers_ebuffer_as_singleton
            (ebpointer: nat*nat)
-  := fun ebpointer => Ensemble ebpointer.
+  := fun ebpointer => Singleton ebpointer.
 
 Variable event_buffer: Type.
-Definition b_included_E_U_ebPointers
+
+Definition E_U_singleton_pointers_e
            (b_r: nat)(b_w: nat)
-  := fun b_r b_w => Union E ebuffer_pointers_to_ensemble( event_buffer_pair_of_pointers b_r b_w).
+  := fun b_r b_w => Union E pointers_ebuffer_as_singleton(event_buffer_pair_of_pointers b_r b_w).
 
 
 (*Definition 5: Topics*)
