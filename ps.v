@@ -31,20 +31,20 @@ Variable T:(Ensemble nat).
 
 
 (*Definition 3: Events*)
-
-Definition t_in_T (t: nat)(T:Ensemble nat) := t ∈ T.
-
-Definition d_in_D (d:data_value)(D:Ensemble data_value) := d ∈ D.
+Definition t_in_T (t: nat) := t ∈ T.
+Definition d_in_D (d:data_value) := d ∈ D.
 
 Definition e: data_value -> nat -> data_value*nat := fun d t => (d,t).
+Variable E : Ensemble(data_value*nat).
 
 Definition DxT
   : Ensemble(data_value*nat)
-  := prod_cart (data_value)(nat)(D:Ensemble data_value)(T: Ensemble nat).
+  := prod_cart (data_value)(nat)(D)(T).
 
+(*actually needed?*)
 Definition e_as_Ensemble (e:data_value*nat) := fun e => Ensemble e.
 
-Definition e_in_E (e:data_value*nat)(E: Ensemble(data_value*nat) ) :=  e ∈ E.
+Definition e_in_E (e:data_value*nat) :=  e ∈ E.
 
 Definition E_included_DxT
            (E:Ensemble(data_value*nat))
@@ -57,21 +57,23 @@ Definition E_included_DxT
 
 (*Definition 5: Topics*)
 Variable topic : Type.
+Variable Tau: Ensemble topic.
 
-Definition τ_in_Tau (τ:topic)(Tau: Ensemble topic) := τ ∈ Tau.
-
+Definition τ_in_Tau (τ:topic) := τ ∈ Tau.
 
 (*Definition 6: Locations*)
-
 Variable location : Type.
+Variable L: Ensemble location.
 
-Definition l_in_L (l:location)(L: Ensemble location) := l ∈ L.
-
+Definition l_in_L (l:location) := l ∈ L.
 
 (*Definition 7: Subscribers*)
 
-(*not finished*)
-Definition s: location -> Ensemble topic := fun l ψl ⊆ Tau: Ensemble topic => (l,ψl).
+Definition s
+           (l:location)
+           (ψl: Ensemble topic)
+  : location*Ensemble topic
+  := (l_in_L l) /\ (ψl ⊆ Tau) -> (l,ψl).
 
 
 
