@@ -65,7 +65,7 @@ Definition pointers_ebuffer_as_singleton
 
 Variable event_buffer: Type.
 
-Definition E_U_singleton_pointers_e
+Definition E_U_singleton_pointers_ebuff
            (b_r: nat)(b_w: nat)
   := fun b_r b_w => Union E pointers_ebuffer_as_singleton(event_buffer_pair_of_pointers b_r b_w).
 
