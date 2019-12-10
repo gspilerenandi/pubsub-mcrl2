@@ -54,6 +54,20 @@ Definition E_included_DxT
 
 (*Definition 4: Event-buffers*)
 (*will be different from what is described in the document*)
+(*??Definition element_to_Ensemble (x:_):= fun x => Ensemble x.??*)
+Definition event_buffer_pair_of_pointers
+  : nat -> nat -> nat*nat
+  := fun b_read b_write => (b_read, b_write).
+
+Definition ebuffer_pointers_to_ensemble
+           (ebpointer: nat*nat)
+  := fun ebpointer => Ensemble ebpointer.
+
+Variable event_buffer: Type.
+Definition b_included_E_U_ebPointers
+           (b_r: nat)(b_w: nat)
+  := fun b_r b_w => Union E ebuffer_pointers_to_ensemble( event_buffer_pair_of_pointers b_r b_w).
+
 
 (*Definition 5: Topics*)
 Variable topic : Type.
@@ -69,11 +83,11 @@ Definition l_in_L (l:location) := l ∈ L.
 
 (*Definition 7: Subscribers*)
 
-Definition s
-           (l:location)
-           (ψl: Ensemble topic)
-  : location*Ensemble topic
-  := (l_in_L l) /\ (ψl ⊆ Tau) -> (l,ψl).
+Definition s:
+           location ->
+           Ensemble topic ->
+           location*Ensemble topic
+  := forall l ψl, (l_in_L l) /\ (ψl ⊆ Tau) => (l,ψl).
 
 
 
