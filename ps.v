@@ -24,71 +24,43 @@ Qed.
 
 (*Definition 1: set of data-values*)
 Variable  data_value: Type.
-Variable D:(Ensemble data_value).
+Definition d_in_D (d: data_value)(D: Ensemble data_value) := d ∈ D.
 
 (*Definition 2: timestamps*)
-Variable T:(Ensemble nat).
-
+Definition t_in_T (t: nat)(T: Ensemble nat) := t ∈ T.
 
 (*Definition 3: Events*)
-Definition t_in_T (t: nat) := t ∈ T.
-Definition d_in_D (d:data_value) := d ∈ D.
+Definition e (d: data_value)(t: nat): data_value*nat := (d,t).
 
-Definition e: data_value -> nat -> data_value*nat := fun d t => (d,t).
-Variable E : Ensemble(data_value*nat).
+Definition e_in_E (e:data_value*nat)(E: Ensemble(data_value*nat)) :=  e ∈ E.
 
-Definition DxT
+Definition DxT (D: Ensemble data_value)(T: Ensemble nat)
   : Ensemble(data_value*nat)
   := prod_cart (data_value)(nat)(D)(T).
 
-(*actually needed?*)
-Definition e_as_Singleton (e:data_value*nat) := fun e => Singleton e.
-
-Definition e_in_E (e:data_value*nat) :=  e ∈ E.
-
 Definition E_included_DxT
            (E:Ensemble(data_value*nat))
+           (D: Ensemble data_value)
+           (T: Ensemble nat)
            (*(DxT:prod_cart (data_value)(nat)(D: Ensemble data_value)(T: Ensemble nat))*)
   : Prop
-  := E ⊆ DxT.
+  := E ⊆ DxT D T.
 
 (*Definition 4: Event-buffers*)
-(*will be different from what is described in the document*)
-(*??Definition element_to_Ensemble (x:_):= fun x => Ensemble x.??*)
-Definition event_buffer_pair_of_pointers
-  : nat -> nat -> nat*nat
-  := fun b_read b_write => (b_read, b_write).
-
-Definition pointers_ebuffer_as_singleton
-           (ebpointer: nat*nat)
-  := fun ebpointer => Singleton ebpointer.
-
-Variable event_buffer: Type.
-
-Definition E_U_singleton_pointers_ebuff
-           (b_r: nat)(b_w: nat)
-  := fun b_r b_w => Union E pointers_ebuffer_as_singleton(event_buffer_pair_of_pointers b_r b_w).
-
+Definition b_included_E (b: Ensemble (data_value*nat))(E: Ensemble(data_value*nat)) := b ⊆ E.
 
 (*Definition 5: Topics*)
 Variable topic : Type.
-Variable Tau: Ensemble topic.
 
-Definition τ_in_Tau (τ:topic) := τ ∈ Tau.
+Definition τ_in_Tau (τ:topic)(Tau: Ensemble topic) := τ ∈ Tau.
 
 (*Definition 6: Locations*)
 Variable location : Type.
-Variable L: Ensemble location.
-
-Definition l_in_L (l:location) := l ∈ L.
+Definition l_in_L (l:location)(L: Ensemble location) := l ∈ L.
 
 (*Definition 7: Subscribers*)
 
-Definition s:
-           location ->
-           Ensemble topic ->
-           location*Ensemble topic
-  := forall l ψl, (l_in_L l) /\ (ψl ⊆ Tau) => (l,ψl).
+Definition s (l:location) (ψl:Ensemble topic) (Tau: Ensemble topic) (L: Ensemble location) (P: (ψl ⊆ Tau ) /\ (l_in_L l L)) :=  (l,ψl).
 
 
 
