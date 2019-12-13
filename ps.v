@@ -122,7 +122,7 @@ Definition l_in_L
   := l ∈ L.
 
 (*Definition 7: Subscribers*)
-(*A subscriber is denoted by s, which is composed by a location l and a set of topics of its interest ψl*)
+(*A subscriber is denoted by s, which is composed by a location l, which should belong to the set of all LOCATIONs L and a set of topics of its interest ψl, which should be a subset of all TOPICs Tau*)
 Definition s
            (l:LOCATION)
            (tτ: Type)
@@ -141,7 +141,33 @@ Definition s_in_S
            (S: Ensemble (LOCATION * Ensemble (TOPIC tτ)))
   := s ∈ S.
 
+Variable J5:(Ensemble TIMESTAMP).
+Variable J4:(Ensemble TIMESTAMP).
+Variable j : TIMESTAMP.
+Variable j2 : TIMESTAMP.
+
+Check Singleton.
+
+Compute  Union TIMESTAMP (Singleton TIMESTAMP j) (Singleton TIMESTAMP j2).
+
+Check  Union TIMESTAMP (Singleton TIMESTAMP j) (Singleton TIMESTAMP j2) .
+
 Notation "∅" := (Empty_set)(at level 0).
+
+Definition pwrSet (y: Ensemble (Ensemble Type))
+    := forall x: Ensemble Type , forall z: Ensemble Type, z ⊆ x -> z ∈ y .
+
+(*
+Fixpoint power_set
+         (J: Ensemble Type)
+         (H: (j ∈ J))
+         (aux: Ensemble Type)
+         (PwrJ: Ensemble (Ensemble Type))
+  : type
+  := match j with
+     | not (Singleton Type j) ⊆ PwrJ  => (Singleton Type j) ∈ PwrJ /\ j ∈ aux := power_set 
+     | (Singleton Type j) ⊆ PwrJ => 
+*)
 
 
 
