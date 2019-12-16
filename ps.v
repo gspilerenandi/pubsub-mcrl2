@@ -154,20 +154,39 @@ Check  Union TIMESTAMP (Singleton TIMESTAMP j) (Singleton TIMESTAMP j2) .
 
 Notation "∅" := (Empty_set)(at level 0).
 
-Definition pwrSet (y: Ensemble (Ensemble Type))
-    := forall x: Ensemble Type , forall z: Ensemble Type, z ⊆ x -> z ∈ y .
+(*https://en.wikipedia.org/wiki/Axiom_of_power_set
+  https://en.wikipedia.org/wiki/Zermelo%E2%80%93Fraenkel_set_theory#8._Axiom_of_power_set
+  https://proofwiki.org/wiki/Definition:Power_Set
 
-(*
+
+Definition pwrSet (y: Ensemble (Ensemble Type))
+  := forall x: Ensemble Type , forall z: Ensemble Type, z ⊆ x -> z ∈ y.
+
+Definition pwr_set2
+           (x: Ensemble Type)
+  : Ensemble (Ensemble Type)
+  := exists y: Ensemble (Ensemble Type), forall z: Ensemble Type, z ∈ y <-> z ⊆ x -> y.
+      
+Definition pwr_set
+           (x: Ensemble Type)
+  : Ensemble (Ensemble Type)
+  := exists y: Ensemble (Ensemble Type), forall z: Ensemble Type, forall w:Type, H:(z ∈ y <-> (w ∈ z -> w ∈ x)) -> y.
+ *)
+
+Print list.
+
 Fixpoint power_set
          (J: Ensemble Type)
-         (H: (j ∈ J))
-         (aux: Ensemble Type)
          (PwrJ: Ensemble (Ensemble Type))
-  : type
-  := match j with
-     | not (Singleton Type j) ⊆ PwrJ  => (Singleton Type j) ∈ PwrJ /\ j ∈ aux := power_set 
+  : Ensemble (Ensemble Type)
+  := match J with
+     | not (J= Empty_set) => x: Type, j':Ensemble Type,
+                                      x ∈ J -> j' -> Substract J x, Singleton (x) ∈ PwrJ
+
+
+                                                     
+       (Singleton Type j) ∈ PwrJ /\ j ∈ aux := power_set 
      | (Singleton Type j) ⊆ PwrJ => 
-*)
 
 
 
