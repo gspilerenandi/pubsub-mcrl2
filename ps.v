@@ -1,8 +1,14 @@
 Require Import Ensembles.
+Require List.
+Require Import Powerset.
+
+Locate In.
 
 Notation "x ∈ y" := (@In _ y x)(at level 30).
 
 Notation "x ⊆ y" := (Included _ x y)(at level 31).
+
+Notation "∅" := (Empty_set)(at level 0).
 
 (*------------------------------------------------------------------------------------------------
   https://stackoverflow.com/questions/56201111/what-is-the-standard-cartesian-product-construction-for-ensemble
@@ -141,52 +147,40 @@ Definition s_in_S
            (S: Ensemble (LOCATION * Ensemble (TOPIC tτ)))
   := s ∈ S.
 
-Variable J5:(Ensemble TIMESTAMP).
-Variable J4:(Ensemble TIMESTAMP).
-Variable j : TIMESTAMP.
-Variable j2 : TIMESTAMP.
+Definition LxTau
+           (tτ: Type)
+           (L: Ensemble (LOCATION))
+           (Tau: Ensemble (TOPIC tτ))
+  : Ensemble(LOCATION * TOPIC tτ)
+  := prod_cart (LOCATION)(TOPIC tτ)(L)(Tau).
 
-Check Singleton.
+Definition TauxL
+           (tτ: Type)
+           (Tau: Ensemble (TOPIC tτ))
+           (L: Ensemble (LOCATION))
+  : Ensemble(TOPIC tτ * LOCATION)
+  := prod_cart (TOPIC tτ)(LOCATION)(Tau)(L).
 
-Compute  Union TIMESTAMP (Singleton TIMESTAMP j) (Singleton TIMESTAMP j2).
+Print LxTau.
+Check LxTau.
 
-Check  Union TIMESTAMP (Singleton TIMESTAMP j) (Singleton TIMESTAMP j2) .
-
-Notation "∅" := (Empty_set)(at level 0).
-
-(*https://en.wikipedia.org/wiki/Axiom_of_power_set
-  https://en.wikipedia.org/wiki/Zermelo%E2%80%93Fraenkel_set_theory#8._Axiom_of_power_set
-  https://proofwiki.org/wiki/Definition:Power_Set
-
-
-Definition pwrSet (y: Ensemble (Ensemble Type))
-  := forall x: Ensemble Type , forall z: Ensemble Type, z ⊆ x -> z ∈ y.
-
-Definition pwr_set2
-           (x: Ensemble Type)
-  : Ensemble (Ensemble Type)
-  := exists y: Ensemble (Ensemble Type), forall z: Ensemble Type, z ∈ y <-> z ⊆ x -> y.
-      
-Definition pwr_set
-           (x: Ensemble Type)
-  : Ensemble (Ensemble Type)
-  := exists y: Ensemble (Ensemble Type), forall z: Ensemble Type, forall w:Type, H:(z ∈ y <-> (w ∈ z -> w ∈ x)) -> y.
- *)
-
-Print list.
-
-Fixpoint power_set
-         (J: Ensemble Type)
-         (PwrJ: Ensemble (Ensemble Type))
-  : Ensemble (Ensemble Type)
-  := match J with
-     | not (J= Empty_set) => x: Type, j':Ensemble Type,
-                                      x ∈ J -> j' -> Substract J x, Singleton (x) ∈ PwrJ
-
-
-                                                     
-       (Singleton Type j) ∈ PwrJ /\ j ∈ aux := power_set 
-     | (Singleton Type j) ⊆ PwrJ => 
+Definition broker
+           (tτ: Type)
+           (l: LOCATION)
+           (L: Ensemble(LOCATION))
+           (Tau: Ensemble(TOPIC tτ))
+  : Ensemble LOCATION * (Ensemble (LOCATION * TOPIC tτ) * Ensemble (TOPIC tτ * LOCATION))
+  := prod_cart
+       (LOCATION)
+       (prod_cart 
+          ((LOCATION * TOPIC tτ))
+          ((TOPIC tτ * LOCATION))
+          (LxTau (tτ)(L)(Tau))
+          (TauxL (tτ)(Tau)(L))
+          (Ensemble (LOCATION * TOPIC tτ) * Ensemble (TOPIC tτ * LOCATION))
+       )
+       (l)
+       (LxTau(tτ)(L)(Tau)*TauxL(tτ)(Tau)(L)).
 
 
 
