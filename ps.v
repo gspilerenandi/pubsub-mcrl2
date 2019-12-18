@@ -138,12 +138,25 @@ Definition s
   : (ψl ⊆ Tau ) /\ (l_in_L l L) -> (LOCATION * Ensemble (TOPIC tτ))
   := fun H => (l,ψl).
 
+
+(*Defining the set of all subscribers*)
+Definition S
+           (tτ: Type)
+           (L: Ensemble LOCATION)
+           (Tau: Ensemble (TOPIC tτ))
+  : Ensemble (Ensemble LOCATION * Ensemble (Ensemble (TOPIC tτ) ) )
+  := prod_cart
+       ( Ensemble LOCATION)
+       ( Ensemble (Ensemble (TOPIC tτ) ) )
+       ( Singleton  (Ensemble LOCATION) L )
+       ( Singleton (Ensemble (Ensemble (TOPIC tτ) )) (Power_set (TOPIC tτ) (Tau) ) ).
+
 (*S denotes the set of all subscribers*)
 Definition s_in_S
-           (l:LOCATION)
+           (l: LOCATION)
            (tτ: Type)
-           (ψl:Ensemble (TOPIC tτ))
-           (s:LOCATION * Ensemble (TOPIC tτ))
+           (ψl: Ensemble (TOPIC tτ))
+           (s: LOCATION * Ensemble (TOPIC tτ))
            (S: Ensemble (LOCATION * Ensemble (TOPIC tτ)))
   := s ∈ S.
 
@@ -165,7 +178,7 @@ Definition TauxL
   := prod_cart (TOPIC tτ)(LOCATION)(Tau)(L).
 
 (*An instance of a broker defined, brk = (l, {}, {}) *)
-Definition broker
+Definition brk
            (tτ: Type)
            (l: LOCATION)
            (L: Ensemble LOCATION)
@@ -181,3 +194,11 @@ Definition broker
           (Singleton (Ensemble (LOCATION * TOPIC tτ)) ( LxTau (tτ)(L)(Tau) ) )
           (Singleton (Ensemble (TOPIC tτ * LOCATION)) ( TauxL (tτ)(Tau)(L) ) )  
        ).
+
+Definition brk_in_BRK
+           (tτ: Type)
+           (l: LOCATION)
+           (L: Ensemble LOCATION)
+           (Tau: Ensemble(TOPIC tτ))
+           (BRK: Ensemble ( Ensemble ( LOCATION * ( Ensemble (LOCATION * TOPIC tτ) * Ensemble (TOPIC tτ * LOCATION) ) ) ) )
+  := term.
