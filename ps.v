@@ -147,6 +147,7 @@ Definition s_in_S
            (S: Ensemble (LOCATION * Ensemble (TOPIC tτ)))
   := s ∈ S.
 
+(*Set of pairs of LOCATIONs and TOPICs, which represent the publishers that publish on a topic*)
 Definition LxTau
            (tτ: Type)
            (L: Ensemble (LOCATION))
@@ -154,6 +155,8 @@ Definition LxTau
   : Ensemble(LOCATION * TOPIC tτ)
   := prod_cart (LOCATION)(TOPIC tτ)(L)(Tau).
 
+
+(*Set of pairs of TOPICs and LOCATIONs, which represent the subscribers that subscribe to a topic*)
 Definition TauxL
            (tτ: Type)
            (Tau: Ensemble (TOPIC tτ))
@@ -161,29 +164,20 @@ Definition TauxL
   : Ensemble(TOPIC tτ * LOCATION)
   := prod_cart (TOPIC tτ)(LOCATION)(Tau)(L).
 
-Print LxTau.
-Check LxTau.
-
+(*An instance of a broker defined, brk = (l, {}, {}) *)
 Definition broker
            (tτ: Type)
            (l: LOCATION)
-           (L: Ensemble(LOCATION))
+           (L: Ensemble LOCATION)
            (Tau: Ensemble(TOPIC tτ))
-  : Ensemble LOCATION * (Ensemble (LOCATION * TOPIC tτ) * Ensemble (TOPIC tτ * LOCATION))
+  : Ensemble ( LOCATION * ( Ensemble (LOCATION * TOPIC tτ) * Ensemble (TOPIC tτ * LOCATION) ) )
   := prod_cart
        (LOCATION)
+       ((Ensemble (LOCATION * (TOPIC tτ)) * Ensemble ((TOPIC tτ) * LOCATION)) )
+       (Singleton LOCATION l)
        (prod_cart 
-          ((LOCATION * TOPIC tτ))
-          ((TOPIC tτ * LOCATION))
-          (LxTau (tτ)(L)(Tau))
-          (TauxL (tτ)(Tau)(L))
-          (Ensemble (LOCATION * TOPIC tτ) * Ensemble (TOPIC tτ * LOCATION))
-       )
-       (l)
-       (LxTau(tτ)(L)(Tau)*TauxL(tτ)(Tau)(L)).
-
-
-
-
-
-
+          (Ensemble (LOCATION * TOPIC tτ))
+          (Ensemble (TOPIC tτ * LOCATION))
+          (Singleton (Ensemble (LOCATION * TOPIC tτ)) ( LxTau (tτ)(L)(Tau) ) )
+          (Singleton (Ensemble (TOPIC tτ * LOCATION)) ( TauxL (tτ)(Tau)(L) ) )  
+       ).
