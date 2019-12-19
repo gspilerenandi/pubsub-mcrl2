@@ -39,7 +39,9 @@ Inductive DATA_VALUE
   := |cdv: tdv -> DATA_VALUE tdv.
 
 (*D is the set of all DATA_VALUE, such that d is an element of it*)
-Record valid_d (tdv: Type) (d: DATA_VALUE tdv): Type := {D: Ensemble (DATA_VALUE tdv); d_in_D: d ∈ D;}.
+Record valid_d (tdv: Type):= {d: DATA_VALUE tdv; D: Ensemble (DATA_VALUE tdv); d_in_D: d ∈ D;}.
+
+Print d.
 
 (*Definition 2: timestamps*)
 (*TIMESTAMP is the representation of time that is adopted by the system*)
@@ -52,7 +54,7 @@ Record valid_t (t: TIMESTAMP ): Type := {T: Ensemble TIMESTAMP; t_in_T: t ∈ T;
 (*Definition 3: Events*)
 (*A pair of a DATA_VALUE and a TIMESTAMP is denoted by e, which stands for event *)
 
-Record valid_e (tdv: Type) (d: valid_d (DATA_VALUE tdv)) (t: valid_t (TIMESTAMP)): Type := {E: Ensemble(DATA_VALUE tdv * TIMESTAMP); e: d*t; e_in_E: e ∈ E}.
+Record valid_e (tdv: Type) (d: DATA_VALUE tdv) (t: TIMESTAMP): Type := {E: Ensemble(DATA_VALUE tdv * TIMESTAMP); e: d*t; e_in_E: e ∈ E}.
 
 Definition e
            (tdv: Type)
