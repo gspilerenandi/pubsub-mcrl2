@@ -109,12 +109,12 @@ Definition TauxL (tτ: Type) (Tau: Ensemble (TOPIC tτ)) (L: Ensemble (LOCATION)
 (*An instance of a broker defined, brk = (l, {}, {}) *)
 Definition brk (tτ: Type) (l: LOCATION) (L: Ensemble LOCATION) (Tau: Ensemble(TOPIC tτ)) : Ensemble (LOCATION * (Ensemble (LOCATION * TOPIC tτ) * Ensemble (TOPIC tτ * LOCATION))) :=
   prod_cart
-       (LOCATION)
-       ((Ensemble (LOCATION * (TOPIC tτ)) * Ensemble ((TOPIC tτ) * LOCATION)) )
+       _ _ (*(LOCATION)
+       ((Ensemble (LOCATION * (TOPIC tτ)) * Ensemble ((TOPIC tτ) * LOCATION)) )*)
        (Singleton LOCATION l)
-       (prod_cart 
-          (Ensemble (LOCATION * TOPIC tτ))
-          (Ensemble (TOPIC tτ * LOCATION))
+       (prod_cart _ _ 
+          (* (Ensemble (LOCATION * TOPIC tτ))
+          (Ensemble (TOPIC tτ * LOCATION)) *)
           (Singleton (Ensemble (LOCATION * TOPIC tτ)) (LxTau (tτ)(L)(Tau)))
           (Singleton (Ensemble (TOPIC tτ * LOCATION)) (TauxL (tτ)(Tau)(L)))  
        ).
