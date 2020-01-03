@@ -33,69 +33,34 @@ Qed.
 
 (*Definition 1: set of data-values*)
 (*DATA_VALUE denotes the type of data which is gathered by nodes in the system*)
-Inductive DATA_VALUE (tdv:Type) : Type :=
-| cdv: tdv -> DATA_VALUE tdv.
+Inductive DATA_VALUE (tdv:Type) : Type :=  cdv: tdv -> DATA_VALUE tdv.
 
 (*D is the set of all DATA_VALUE, such that d is an element of it*)
 Record valid_d (tdv: Type)(D: Ensemble (DATA_VALUE tdv)): Type :=
   {
     d: DATA_VALUE tdv;
-  
     d_in_D: d ∈ D;
   }.
-
-Print d.
-
-(*Definition 2: timestamps*)
-(*TIMESTAMP is the representation of time that is adopted by the system*)
-Inductive TIMESTAMP
-  := |cdtime: nat -> TIMESTAMP.
-
-Check cdtime.
-
-(*T is the set of all TIMESTAMPs recorded by the system, such that t is an element of it*)
-Record valid_t (t: TIMESTAMP ): Type := {T: Ensemble TIMESTAMP; t_in_T: t ∈ T;}.
-
-Check T.
 
 (*Definition 3: Events*)
 (*A pair of a DATA_VALUE and a TIMESTAMP is denoted by e, which stands for event *)
 
 Definition valid_e (tdv: Type)(D: Ensemble (DATA_VALUE tdv)) := pair (valid_d _ D)  nat.
+
 Print valid_e.
 
-Definition e
-           (tdv: Type)
-           (d: DATA_VALUE tdv )
-           (t: TIMESTAMP)
-  : DATA_VALUE tdv *TIMESTAMP
-  := (d,t).
-(*E is the set of all EVENTs recorded by the system *)
-Definition e_in_E
-           (tdv: Type)
-           (e:DATA_VALUE tdv*TIMESTAMP)
-           (E: Ensemble(DATA_VALUE tdv * TIMESTAMP))
-  := e ∈ E.
-
-(*DxT is the cartesian product of the sets D by T*)
-Definition DxT
-           (tdv: Type)
-           (D: Ensemble (DATA_VALUE tdv))
-           (T: Ensemble TIMESTAMP)
-  : Ensemble(DATA_VALUE tdv*TIMESTAMP)
-  := prod_cart (DATA_VALUE tdv)(TIMESTAMP)(D)(T).
-
-(*The set E of all events is included in the cartesian product DxT *)
-Definition E_included_DxT
-           (tdv: Type)
-           (E:Ensemble(DATA_VALUE tdv * TIMESTAMP))
-           (D: Ensemble (DATA_VALUE tdv))
-           (T: Ensemble TIMESTAMP)
-  : Prop
-  := E ⊆ DxT tdv D T.
+Definition valid_e_in_E (tdv: Type)(D: Ensemble (DATA_VALUE tdv))(E: Ensemble (Type*Set)): Prop :=
+ (valid_e tdv D) ∈ E.
 
 (*Definition 4: Event-buffers*)
 (*An event buffer is a subset of E, being it denoted by b  *)
+
+Record valid_b (tdv: Type)(D: Ensemble (DATA_VALUE tdv))(E: Ensemble (Type*Set)) :=
+  {
+    b: Ensemble (pair (valid_d _ D) nat);
+    b_included_E: b ⊆ E;
+  }.
+
 Definition b_included_E
            (tdv: Type)
            (b: Ensemble (DATA_VALUE tdv * TIMESTAMP))
@@ -181,7 +146,7 @@ Definition TauxL
   : Ensemble(TOPIC tτ * LOCATION)
   := prod_cart (TOPIC tτ)(LOCATION)(Tau)(L).
 
-(*An instance of a broker defined, brk = (l, {}, {}) *)
+(*An instance of a broker defined, brk ⊆ {l, {}, {}} *)
 Definition brk
            (tτ: Type)
            (l: LOCATION)
@@ -198,11 +163,3 @@ Definition brk
           (Singleton (Ensemble (LOCATION * TOPIC tτ)) ( LxTau (tτ)(L)(Tau) ) )
           (Singleton (Ensemble (TOPIC tτ * LOCATION)) ( TauxL (tτ)(Tau)(L) ) )  
        ).
-
-Definition brk_in_BRK
-           (tτ: Type)
-           (l: LOCATION)
-           (L: Ensemble LOCATION)
-           (Tau: Ensemble(TOPIC tτ))
-           (BRK: Ensemble ( Ensemble ( LOCATION * ( Ensemble (LOCATION * TOPIC tτ) * Ensemble (TOPIC tτ * LOCATION) ) ) ) )
-  := term.
