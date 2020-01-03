@@ -55,11 +55,17 @@ Definition valid_e_in_E (tdv: Type)(D: Ensemble (DATA_VALUE tdv))(E: Ensemble (T
 (*Definition 4: Event-buffers*)
 (*An event buffer is a subset of E, being it denoted by b  *)
 
-Record valid_b (tdv: Type)(D: Ensemble (DATA_VALUE tdv))(E: Ensemble (Type*Set)) :=
+Record valid_b (tdv: Type)(D: Ensemble (DATA_VALUE tdv))(E: Ensemble (Type*nat))(e: valid_e (Type)(Ensemble (DATA_VALUE Type))) :=
   {
-    b: Ensemble (pair (valid_d _ D) nat);
+    b: Ensemble (e (tdv)(D));
     b_included_E: b ⊆ E;
   }.
+
+Definition valid_b (tdv: Type)(D: Ensemble (DATA_VALUE tdv))(E: Ensemble (Type*nat))
+  := Ensemble (valid_e tdv D) ⊆ E.
+
+
+(*
 
 Definition b_included_E
            (tdv: Type)
@@ -163,3 +169,5 @@ Definition brk
           (Singleton (Ensemble (LOCATION * TOPIC tτ)) ( LxTau (tτ)(L)(Tau) ) )
           (Singleton (Ensemble (TOPIC tτ * LOCATION)) ( TauxL (tτ)(Tau)(L) ) )  
        ).
+
+*)
