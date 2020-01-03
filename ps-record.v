@@ -34,7 +34,6 @@ Qed.
 (*Definition 1: set of data-values*)
 (*DATA_VALUE denotes the type of data which is gathered by nodes in the system*)
 Inductive DATA_VALUE (tdv:Type) : Type :=  cdv: tdv -> DATA_VALUE tdv.
-
 (*D is the set of all DATA_VALUE, such that d is an element of it*)
 Record valid_d (tdv: Type)(D: Ensemble (DATA_VALUE tdv)): Type :=
   {
@@ -47,64 +46,66 @@ Record valid_d (tdv: Type)(D: Ensemble (DATA_VALUE tdv)): Type :=
 
 Definition valid_e (tdv: Type)(D: Ensemble (DATA_VALUE tdv)) := pair (valid_d _ D)  nat.
 
-Print valid_e.
-
 Definition valid_e_in_E (tdv: Type)(D: Ensemble (DATA_VALUE tdv))(E: Ensemble (Type*Set)): Prop :=
  (valid_e tdv D) ∈ E.
 
 (*Definition 4: Event-buffers*)
 (*An event buffer is a subset of E, being it denoted by b  *)
 
-Record valid_b (tdv: Type)(D: Ensemble (DATA_VALUE tdv))(E: Ensemble (Type*nat))(e: valid_e (Type)(Ensemble (DATA_VALUE Type))) :=
+Record valid_b (tdv: Type)(E: Ensemble (tdv*Set)) :=
   {
-    b: Ensemble (e (tdv)(D));
+    b: Ensemble (tdv*Set);
     b_included_E: b ⊆ E;
   }.
 
-Definition valid_b (tdv: Type)(D: Ensemble (DATA_VALUE tdv))(E: Ensemble (Type*nat))
-  := Ensemble (valid_e tdv D) ⊆ E.
+(*Set Printing Projections.*)
+
+(*B denotes the set of all event buffers, which are themselves sets of events*)
+(*
+Definition valid_b_in_B (tdv: Type)(B: Ensemble (Ensemble (tdv*Set)))(E: Ensemble (tdv*Set))
+  := b tdv ∈ B.
+
+Print valid_b.
+*)
+
+(*Definition 5: Topics*)
+(*A TOPIC is used to categorize DATA_VALUEs *)
+Inductive TOPIC (tτ:Type) : Type :=  cτ: tτ -> TOPIC tτ.
+Record valid_τ (tτ:Type)(Tau: Ensemble (TOPIC tτ))
+  :=
+    {
+      τ: TOPIC tτ;
+      τ_in_Tau: τ ∈ Tau ;
+    }.
+
+(*Definition 6: Locations*)
+(*A LOCATION denotes a unique identifier of an entity in the system*)
+Inductive LOCATION (tl: Set): Set := cl: tl -> LOCATION tl.
+Record valid_l (tl: Set)(L: Ensemble (LOCATION tl))
+  :=
+    {
+      l: LOCATION tl;
+      l_in_L: l ∈ L;
+    }.
+
+(*Definition 7: Subscribers*)
+Record valid_s
+       (tτ: Type)
+       (tl: Set)
+       (Tau ψl: Ensemble (TOPIC tτ))
+       (L: Ensemble (LOCATION tl))
+  :=
+    {
+      ψl_in_Tau: ψl ⊆ Tau;
+      s: pair (l) (Ensemble (TOPIC tτ));
+    }.
+
+Definition s_in_S () := term.
 
 
 (*
 
-Definition b_included_E
-           (tdv: Type)
-           (b: Ensemble (DATA_VALUE tdv * TIMESTAMP))
-           (E: Ensemble(DATA_VALUE tdv * TIMESTAMP))
-  := b ⊆ E.
 
-(*B denotes the set of all event buffers, which are themselves sets of events*)
-Definition b_in_B
-           (tdv: Type)
-           (b: Ensemble (DATA_VALUE tdv * TIMESTAMP))
-           (B: Ensemble (Ensemble (DATA_VALUE tdv * TIMESTAMP)))
-  := b ∈ B.
-
-(*Definition 5: Topics*)
-(*A TOPIC is used to categorize DATA_VALUEs *)
-Inductive TOPIC
-          (tτ: Type)
-  : Type
-  :=|ctpc: tτ -> TOPIC tτ.
-
-(*Tau denotes the set of all TOPICs*)
-Definition τ_in_Tau
-           (tτ: Type)
-           (τ: TOPIC tτ)
-           (Tau: Ensemble (TOPIC tτ))
-  := τ ∈ Tau.
-
-(*Definition 6: Locations*)
-(*A LOCATION denotes a unique identifier of an entity in the system*)
-Inductive LOCATION  
-  :=|cloc: nat -> LOCATION.
-(*L denotes the set of all LOCATIONs*)
-Definition l_in_L
-           (l:LOCATION)
-           (L: Ensemble LOCATION)
-  := l ∈ L.
-
-(*Definition 7: Subscribers*)
 (*A subscriber is denoted by s, which is composed by a location l, which should belong to the set of all LOCATIONs L and a set of topics of its interest ψl, which should be a subset of all TOPICs Tau*)
 Definition s
            (l:LOCATION)
