@@ -81,60 +81,49 @@ Record valid_τ (tτ:Type)(Tau: Ensemble (TOPIC tτ))
 (*Definition 6: Locations*)
 (*A LOCATION denotes a unique identifier of an entity in the system*)
 Inductive LOCATION (tl: Set): Set := cl: tl -> LOCATION tl.
-Record valid_l (tl: Set)(L: Ensemble (LOCATION tl))
+Record valid_l (tl: Set)(L: Ensemble (LOCATION tl)): Set
   :=
     {
       l: LOCATION tl;
       l_in_L: l ∈ L;
     }.
 
+Print valid_l.
+
+Set Printing Projections.
+
 (*Definition 7: Subscribers*)
-Record valid_s
+
+Definition valid_ψ (tτ: Type)(Tau: Ensemble (TOPIC tτ)) := forall ψl: Ensemble (TOPIC tτ), ψl ⊆ Tau.
+
+Definition valid_s
        (tτ: Type)
        (tl: Set)
        (Tau ψl: Ensemble (TOPIC tτ))
        (L: Ensemble (LOCATION tl))
+  : (valid_ψ _ Tau) -> Set*(Ensemble (TOPIC tτ))
+  := fun H => pair (valid_l tl L) ψl .
+
+Print valid_s.
+
+Definition valid_s_in_S (tl: Set) (tτ: Type)(s: tl*(Ensemble (TOPIC tτ)))(S: Ensemble (tl*(Ensemble (TOPIC tτ))))
+  := s ∈ S.
+
+Definition ident := term.
+
+(*
+Record subscriber
+       (tτ: Type)
+       (tl: Set)
+       (Tau ψl: Ensemble (TOPIC tτ))
+       (L: Ensemble (LOCATION tl))
+       (vl: valid_l (tl)(L))
   :=
     {
       ψl_in_Tau: ψl ⊆ Tau;
-      s: pair (l) (Ensemble (TOPIC tτ));
+      s: pair (vl.(l)) (ψl);
     }.
 
-Definition s_in_S () := term.
-
-
-(*
-
-
-(*A subscriber is denoted by s, which is composed by a location l, which should belong to the set of all LOCATIONs L and a set of topics of its interest ψl, which should be a subset of all TOPICs Tau*)
-Definition s
-           (l:LOCATION)
-           (tτ: Type)
-           (ψl:Ensemble (TOPIC tτ))
-           (Tau: Ensemble (TOPIC tτ))
-           (L: Ensemble LOCATION)
-  : (ψl ⊆ Tau ) /\ (l_in_L l L) -> (LOCATION * Ensemble (TOPIC tτ))
-  := fun H => (l,ψl).
-
-
-(*Defining the set of all subscribers*)
-Definition S
-           (tτ: Type)
-           (L: Ensemble LOCATION)
-           (Tau: Ensemble (TOPIC tτ))
-  : Ensemble (Ensemble LOCATION * Ensemble (Ensemble (TOPIC tτ) ) )
-  := prod_cart
-       ( Ensemble LOCATION)
-       ( Ensemble (Ensemble (TOPIC tτ) ) )
-       ( Singleton  (Ensemble LOCATION) L )
-       ( Singleton (Ensemble (Ensemble (TOPIC tτ) )) (Power_set (TOPIC tτ) (Tau) ) ).
-
-(*S denotes the set of all subscribers*)
-Definition s_in_S
-           (tτ: Type)
-           (s: LOCATION * Ensemble (TOPIC tτ))
-           (S: Ensemble (LOCATION * Ensemble (TOPIC tτ)))
-  := s ∈ S.
 
 (*Set of pairs of LOCATIONs and TOPICs, which represent the publishers that publish on a topic*)
 Definition LxTau
