@@ -91,7 +91,7 @@ Definition s
        (Tau ψl: Ensemble (TOPIC tτ))
        (L: Ensemble (LOCATION tl))
   : (ψ _ Tau) -> Set*(Ensemble (TOPIC tτ))
-  := fun H => pair (l tl L) ψl .
+  := fun H => pair (l _  L) ψl .
 
 Definition s_in_S
            (tl: Set)
@@ -100,36 +100,39 @@ Definition s_in_S
            (S: Ensemble (tl*(Ensemble (TOPIC tτ))))
   := s ∈ S.
 
+Definition L_prodcart_Tau
+           (tl: Set)
+           (tτ: Type)
+           (L: Ensemble (LOCATION tl))
+           (Tau: Ensemble (TOPIC tτ))
+  : Ensemble(LOCATION tl * TOPIC tτ)
+  := prod_cart (LOCATION tl)(TOPIC tτ)(L)(Tau).
+
+Definition Tau_prodcart_L
+           (tl: Set)
+           (tτ: Type)
+           (Tau: Ensemble (TOPIC tτ))
+           (L: Ensemble (LOCATION tl))
+  : Ensemble(TOPIC tτ * LOCATION tl)
+  := prod_cart (TOPIC tτ)(LOCATION tl)(Tau)(L).
+
+Definition Brk
+           (tl: Set)
+           (tτ: Type)
+           (L: Ensemble (LOCATION tl))
+           (Tau: Ensemble(TOPIC tτ))
+  := pair (LOCATION tl)(prod_cart
+                          (Ensemble (LOCATION tl * TOPIC tτ))
+                          (_)
+                          (Singleton (Ensemble (L_prodcart_Tau (_)(_)(L)(Tau))))
+                          (Singleton (Ensemble (Tau_prodcart_L (_)(_)(Tau)(L))))
+                        ).
+
 (*
-Record subscriber
-       (tτ: Type)
-       (tl: Set)
-       (Tau ψl: Ensemble (TOPIC tτ))
-       (L: Ensemble (LOCATION tl))
-       (vl: valid_l (tl)(L))
-  :=
-    {
-      ψl_in_Tau: ψl ⊆ Tau;
-      s: pair (vl.(l)) (ψl);
-    }.
-
-
+(LOCATION tl * TOPIC tτ)
+Ensemble (pair (LOCATION tl) (TOPIC tτ))
+Ensemble (pair (TOPIC tτ) (LOCATION tl))
 (*Set of pairs of LOCATIONs and TOPICs, which represent the publishers that publish on a topic*)
-Definition LxTau
-           (tτ: Type)
-           (L: Ensemble (LOCATION))
-           (Tau: Ensemble (TOPIC tτ))
-  : Ensemble(LOCATION * TOPIC tτ)
-  := prod_cart (LOCATION)(TOPIC tτ)(L)(Tau).
-
-
-(*Set of pairs of TOPICs and LOCATIONs, which represent the subscribers that subscribe to a topic*)
-Definition TauxL
-           (tτ: Type)
-           (Tau: Ensemble (TOPIC tτ))
-           (L: Ensemble (LOCATION))
-  : Ensemble(TOPIC tτ * LOCATION)
-  := prod_cart (TOPIC tτ)(LOCATION)(Tau)(L).
 
 (*An instance of a broker defined, brk ⊆ {l, {}, {}} *)
 Definition brk
