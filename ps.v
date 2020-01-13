@@ -208,15 +208,6 @@ Definition brk_in_BRK
   : Prop
   := brk ∈ BRK.
 
-Inductive REQUEST (tr: Type)
+Inductive ACTION (tλ: Type)
   : Type
-  := cr: tr -> REQUEST tr.
-
-Definition SYNC_BUFFER
-           (tr: Type)
-  :=  list (REQUEST tr).
-
-Definition p
-           ()
-  :
-  := term.
+  := cλ: tλ -> ACTION tλ.
