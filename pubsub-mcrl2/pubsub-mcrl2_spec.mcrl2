@@ -1,0 +1,88 @@
+sort
+  % fixed set of locations and topics
+  Loc = struct l1 | l2 | l3 | lbr;
+  Top = struct t1 | t2;
+
+  % used by the broker to store pubs and subs
+  TopLoc = struct topLoc(top: Top, loc: Loc);
+  TopLocs = Set(TopLoc);
+
+  % Used by the publisher to store outgoing data
+  BPL = struct bpl(getB:List(Int),getBLocs:Set(Loc));
+  TopBuffer = Top -> BPL;
+  
+
+% Auxiliary functions
+map addTL: TopLocs # Top # Loc -> TopLocs;
+    hasTL: TopLocs # Top # Loc -> Bool;
+    hasTop: TopLocs # Top -> Bool;
+    emptyBuf: TopBuffer;
+    addBuf: TopBuffer # Top # Loc -> TopBuffer;
+var t:Top;
+	l:Loc;
+	tl:TopLocs;
+    tb:TopBuffer;
+eqn addTL(tl,t,l) = tl + {topLoc(t,l)};
+    hasTL(tl,t,l) = topLoc(t,l) in tl;
+    hasTop(tl,t) = exists l:Loc . topLoc(t,l) in tl;
+    %%
+    emptyBuf = lambda t:Top . bpl([],{});
+    addBuf(tb,t,l) = tb[t -> bpl( getB(tb(t)) , getBLocs(tb(t))+{l} )];
+
+
+act
+  a, b, c;
+    sub,  subP,  subS,  subB: Loc # Top;
+  unsub,unsubP,unsubS,unsubB: Loc # Top;
+
+
+%%%%%%%%%%
+
+proc
+
+Pub = a.b.Pub;
+
+% Subscriber state:
+%  l - location
+%  ts - subscribed topics
+Sub(l:Loc,ts:Set(Top)) =
+ sum t':Top .
+   subS(l,t') . Sub(l,ts + {t'});
+
+% Publisher state:
+%   l - location
+%   tb - buffer of topics (topic -> B x Set(Loc)) 
+Pub(l:Loc,tb:TopBuffer) =
+ sum l':Loc, t':Top .
+   subP(l' ,t') .
+   Pub(l,addBuf(tb,t',l'));
+    %tb[t' -> bpl( getB(tb(t')) , getBLocs(tb(t'))+{l'} )]);
+
+% Broker state:
+%   l - location
+%   pubs: publishers  (locs) and their topics
+%   subs: subscribers (locs) and their topics
+Brk(l:Loc, pubs:TopLocs, subs: TopLocs) = 
+  sum l':Loc,t':Top .
+    subB(l',t') .
+    Brk(l,pubs,subs + {topLoc(t',l')});
+
+% Currently only synchronising with one of the publishers
+Prog = 
+  allow( {sub},
+  comm( {subS|subP|subB -> sub}
+      , Sub(l1,{}) ||
+        Pub(l2,emptyBuf) ||
+        Pub(l3,emptyBuf) ||
+        Brk(lbr,{},{})
+  ));
+
+
+%%%%%%%
+
+init
+
+  %Sub(l1,{});
+  %Brk(l1,{},{});
+  %Pub(l1,emptyTopBuffer);
+  Prog;
