@@ -1,0 +1,113 @@
+sort
+  % fixed set of locations and topics
+  % locations are denoted by L
+  L = struct l1 | l2 | l3 | lbr;
+  % topics are denoted by Tau
+  Tau = struct tau1 | tau2;
+
+  % used by the broker to store pubs and subs  
+  pair_l_tau = struct location_topic(location: L, topic: Tau);
+  %set containing pairs of locations and topics
+  varrho = Set(pair_l_tau);
+
+  pair_tau_l = struct topic_location(topic': Tau, location': L);
+  %set containing pairs of topics and locations  
+  sigma = Set(pair_tau_l);
+
+ % Used by the publisher to store outgoing data
+  BPL = struct bpl(getB:List(Int),getBL:Set(L));
+  T_Buffer = Tau -> BPL;
+
+  pair_e_s = struct bel(getE: Int, getBS: L);
+  %an event-buffer contains a list of pairs of events and locations
+  B = List(pair_e_s);
+  T_Buffer2 = Tau -> B;	
+
+
+% Auxiliary functions
+map addTauL: sigma # Tau # L -> sigma;
+    hasTauL: sigma # Tau # L -> Bool;
+    hasTau: sigma # Tau -> Bool;
+    emptyBuf: T_Buffer;
+    addBuf: T_Buffer # Tau # L -> T_Buffer;
+    
+	emptyBuf2: T_Buffer2;
+    addBuf2: T_Buffer2 # Tau # L -> T_Buffer2;
+	addLTau: varrho # L # Tau -> varrho;
+    hasLTau: varrho # L # Tau -> Bool;
+    hasTau2: varrho # Tau -> Bool;
+
+var t:Tau;
+	l:L;
+	tl:sigma;
+	tl2:varrho;
+    tb:T_Buffer;
+    tb2:T_Buffer2;
+
+eqn addTauL(tl,t,l) = tl + {pair_tau_l(t,l)};
+    hasTauL(tl,t,l) = pair_tau_l(t,l) in tl;
+    hasTau(tl,t) = exists l:L . pair_tau_l(t,l) in tl;
+    %%
+    emptyBuf = lambda t:Tau . bpl([],{});
+    addBuf(tb,t,l) = tb[t -> bpl( getB(tb(t)) , getBL(tb(t))+{l} )];
+    addBuf2(tb2,t,l) = tb2[t -> B( getE(tb(t)) , getBS(tb(t))+{l} )];
+	%%
+	addLTau(tl2,t,l) = tl2 + {pair_l_tau(l,t)};
+    hasLTau(tl2,t,l) = pair_l_tau(l,t) in tl2;
+    hasTau2(tl2,t) = exists l:L . pair_l_tau(l,t) in tl2;
+
+act
+  a, b, c;
+    sub,  subP,  subS,  subB: L # Tau;
+  unsub,unsubP,unsubS,unsubB: L # Tau;
+
+%%%%%%%%%%
+
+proc
+
+Pub = a.b.Pub;
+
+% Subscriber state:
+%  l - location
+%  psi_l - subscribed topics
+Sub(l:L,psi_l:Set(Tau)) =
+ sum t':Tau .
+   subS(l,t') . Sub(l,psi_l + {t'});
+
+% Publisher state:
+%   l - location
+%   tb - buffer of topics (topic -> B x Set(Loc)) 
+Pub(l:L,tb:T_Buffer) =
+ sum l':L, t':Tau .
+   subP(l' ,t') .
+   Pub(l,addBuf(tb,t',l'));
+    %tb[t' -> bpl( getB(tb(t')) , getBLocs(tb(t'))+{l'} )]);
+
+% Broker state:
+%   l - location
+%   pubs: publishers  (locs) and their topics
+%   subs: subscribers (locs) and their topics
+Brk(l:L, pubs:varrho, subs: varrho) = 
+  sum l':L,t':Tau .
+    subB(l',t') .
+    Brk(l,pubs,subs + {pair_tau_l(t',l')});
+
+% Currently only synchronising with one of the publishers
+Prog = 
+  allow( {sub},
+  comm( {subS|subP|subB -> sub}
+      , Sub(l1,{}) ||
+        Pub(l2,emptyBuf) ||
+        Pub(l3,emptyBuf) ||
+        Brk(lbr,{},{})
+  ));
+
+
+%%%%%%%
+
+init
+
+  %Sub(l1,{});
+  %Brk(l1,{},{});
+  %Pub(l1,emptyTopBuffer);
+  Prog;
