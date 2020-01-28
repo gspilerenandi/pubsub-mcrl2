@@ -6,21 +6,22 @@ sort
   Tau = struct tau1 | tau2;
 
   % used by the broker to store pubs and subs  
-  pair_l_tau = struct location_topic(location: L, topic: Tau);
-  %set containing pairs of locations and topics
-  varrho = Set(pair_l_tau);
+  LxTau = struct l_pair_tau(location: L, topic: Tau);
+  % set containing pairs of locations and topics
+  varrho = Set(LxTau);
 
-  pair_tau_l = struct topic_location(topic': Tau, location': L);
-  %set containing pairs of topics and locations  
-  sigma = Set(pair_tau_l);
+  TauxL = struct tau_pair_l(topic': Tau, location': L);
+  % set containing pairs of topics and locations  
+  sigma = Set(TauxL);
 
- % Used by the publisher to store outgoing data
+  % used by the publisher to store outgoing data
   BPL = struct bpl(getB:List(Int),getBL:Set(L));
   T_Buffer = Tau -> BPL;
 
-  pair_e_s = struct bel(getE: Int, getBS: L);
-  %an event-buffer contains a list of pairs of events and locations
-  B = List(pair_e_s);
+  pair_e_l = struct bel(getE: Int, getBS: L);
+  % an event-buffer contains a list of sets of pairs of events and locations
+  ExL = Set(pair_e_l);
+  B = List(ExL);
   T_Buffer2 = Tau -> B;	
 
 
@@ -39,22 +40,22 @@ map addTauL: sigma # Tau # L -> sigma;
 
 var t:Tau;
 	l:L;
-	tl:sigma;
-	tl2:varrho;
+	sigma':sigma;
+	varrho'2:varrho;
     tb:T_Buffer;
     tb2:T_Buffer2;
 
-eqn addTauL(tl,t,l) = tl + {pair_tau_l(t,l)};
-    hasTauL(tl,t,l) = pair_tau_l(t,l) in tl;
-    hasTau(tl,t) = exists l:L . pair_tau_l(t,l) in tl;
+eqn addTauL(sigma',t,l) = sigma' + {TauxL(t,l)};
+    hasTauL(sigma',t,l) = TauxL(t,l) in sigma';
+    hasTau(sigma',t) = exists l:L . TauxL(t,l) in sigma';
     %%
     emptyBuf = lambda t:Tau . bpl([],{});
     addBuf(tb,t,l) = tb[t -> bpl( getB(tb(t)) , getBL(tb(t))+{l} )];
     addBuf2(tb2,t,l) = tb2[t -> B( getE(tb(t)) , getBS(tb(t))+{l} )];
 	%%
-	addLTau(tl2,t,l) = tl2 + {pair_l_tau(l,t)};
-    hasLTau(tl2,t,l) = pair_l_tau(l,t) in tl2;
-    hasTau2(tl2,t) = exists l:L . pair_l_tau(l,t) in tl2;
+	addLTau(varrho',t,l) = varrho' + {LxTau(l,t)};
+    hasLTau(varrho',t,l) = LxTau(l,t) in varrho';
+    hasTau2(varrho',t) = exists l:L . LxTau(l,t) in varrho';
 
 act
   a, b, c;
@@ -90,7 +91,7 @@ Pub(l:L,tb:T_Buffer) =
 Brk(l:L, pubs:varrho, subs: varrho) = 
   sum l':L,t':Tau .
     subB(l',t') .
-    Brk(l,pubs,subs + {pair_tau_l(t',l')});
+    Brk(l,pubs,subs + {TauxL(t',l')});
 
 % Currently only synchronising with one of the publishers
 Prog = 
