@@ -1,66 +1,64 @@
 sort
   % fixed set of locations and topics
-  % locations are denoted by L
-  L = struct l1 | l2 | l3 | lbr;
-  % topics are denoted by Tau
-  Tau = struct tau1 | tau2;
+  % locations are denoted by Loc
+  Loc = struct loc1 | loc2 | loc3 | locbr;
+  % topics are denoted by Top
+  Top = struct top1 | top2;
+  % data values used in the system 
+  Ev = struct ev1 | ev2;
 
   % used by the broker to store pubs and subs  
-  LxTau = struct l_pair_tau(location: L, topic: Tau);
+  loc_top = struct p_loc_top(location: Loc, topic: Top);
   % set containing pairs of locations and topics
-  varrho = Set(LxTau);
+  varrho = Set(loc_top);
 
-  TauxL = struct tau_pair_l(topic': Tau, location': L);
+  top_loc = struct p_top_loc(topic': Top, location': Loc);
   % set containing pairs of topics and locations  
-  sigma = Set(TauxL);
+  sigma = Set(top_loc);
 
   % used by the publisher to store outgoing data
-  BPL = struct bpl(getB:List(Int),getBL:Set(L));
-  T_Buffer = Tau -> BPL;
+  %BPL = struct bpl(getB:List(Int),getBL:Set(L));
+  %T_Buffer = Tau -> BPL;
 
-  pair_e_l = struct bel(getE: Int, getBS: L);
   % an event-buffer contains a list of sets of pairs of events and locations
-  ExL = Set(pair_e_l);
-  B = List(ExL);
-  T_Buffer2 = Tau -> B;	
-
+  ev_loc = struct p_ev_loc(event: Ev, location'': Loc);
+  EvxLoc = Set(ev_loc);
+  B = List(EvxLoc);
+  TxB = Top -> B;	
 
 % Auxiliary functions
-map addTauL: sigma # Tau # L -> sigma;
-    hasTauL: sigma # Tau # L -> Bool;
-    hasTau: sigma # Tau -> Bool;
-    emptyBuf: T_Buffer;
-    addBuf: T_Buffer # Tau # L -> T_Buffer;
-    
-	emptyBuf2: T_Buffer2;
-    addBuf2: T_Buffer2 # Tau # L -> T_Buffer2;
-	addLTau: varrho # L # Tau -> varrho;
-    hasLTau: varrho # L # Tau -> Bool;
-    hasTau2: varrho # Tau -> Bool;
+map add_top_loc: sigma # Top # Loc -> sigma;
+ 	in_Top_Loc: sigma # Top # Loc -> Bool;
+ 	sig_containsTop: sigma # Top -> Bool;
+ 	emptyB: TxB;
+    addtoB: TxB # Top # B -> TxB;
+	%eqn    addtoB(tb,t,l) = tb[t -> p_ev_loc( event(tb(t)) , location''(tb(t))+{l} )];
+	add_loc_top: varrho # Loc # Top -> varrho;
+	in_loc_top: varrho # Loc # Top -> Bool;
+	vr_containsTop: varrho # Top -> Bool;
 
-var t:Tau;
-	l:L;
+var t:Top;
+	l:Loc;
 	sigma':sigma;
-	varrho'2:varrho;
-    tb:T_Buffer;
-    tb2:T_Buffer2;
+	varrho':varrho;
+	ev_loc': ev_loc;
+	B': B;
+	B'': B;
+    TxB':TxB;
 
-eqn addTauL(sigma',t,l) = sigma' + {TauxL(t,l)};
-    hasTauL(sigma',t,l) = TauxL(t,l) in sigma';
-    hasTau(sigma',t) = exists l:L . TauxL(t,l) in sigma';
-    %%
-    emptyBuf = lambda t:Tau . bpl([],{});
-    addBuf(tb,t,l) = tb[t -> bpl( getB(tb(t)) , getBL(tb(t))+{l} )];
-    addBuf2(tb2,t,l) = tb2[t -> B( getE(tb(t)) , getBS(tb(t))+{l} )];
-	%%
-	addLTau(varrho',t,l) = varrho' + {LxTau(l,t)};
-    hasLTau(varrho',t,l) = LxTau(l,t) in varrho';
-    hasTau2(varrho',t) = exists l:L . LxTau(l,t) in varrho';
+eqn add_top_loc(sigma',t,l) = sigma' + {p_top_loc(t,l)};
+    in_Top_Loc(sigma',t,l) = p_top_loc(t,l) in sigma';
+ 	sig_containsTop(sigma',t) = exists l:Loc . p_top_loc(t,l) in sigma';
+	emptyB = lambda t:Top.([]);
+    addtoB(TxB',t,B'') = TxB'[t -> B' ++ B''];
+	add_loc_top(varrho',l,t) = varrho' + {p_loc_top(l,t)};
+ 	in_loc_top(varrho',l,t) = p_loc_top(l,t) in varrho';
+	vr_containsTop(varrho',t) = exists l:Loc . p_loc_top(l,t) in varrho';
 
 act
   a, b, c;
-    sub,  subP,  subS,  subB: L # Tau;
-  unsub,unsubP,unsubS,unsubB: L # Tau;
+    sub,  subP,  subS,  subB: Loc # Top;
+  unsub,unsubP,unsubS,unsubB: Loc # Top;
 
 %%%%%%%%%%
 
@@ -71,36 +69,36 @@ Pub = a.b.Pub;
 % Subscriber state:
 %  l - location
 %  psi_l - subscribed topics
-Sub(l:L,psi_l:Set(Tau)) =
- sum t':Tau .
+Sub(l:Loc,psi_l:Set(Top)) =
+ sum t':Top .
    subS(l,t') . Sub(l,psi_l + {t'});
 
 % Publisher state:
 %   l - location
 %   tb - buffer of topics (topic -> B x Set(Loc)) 
-Pub(l:L,tb:T_Buffer) =
- sum l':L, t':Tau .
+Pub(l:Loc,txb:TxB,b:B) =
+ sum l':Loc, t':Top .
    subP(l' ,t') .
-   Pub(l,addBuf(tb,t',l'));
-    %tb[t' -> bpl( getB(tb(t')) , getBLocs(tb(t'))+{l'} )]);
+   Pub(l,addtoB(txb,t',b),b);
 
 % Broker state:
 %   l - location
 %   pubs: publishers  (locs) and their topics
 %   subs: subscribers (locs) and their topics
-Brk(l:L, pubs:varrho, subs: varrho) = 
-  sum l':L,t':Tau .
+Brk(l:Loc, pubs:varrho, subs: sigma) = 
+  sum l':Loc,t':Top .
     subB(l',t') .
-    Brk(l,pubs,subs + {TauxL(t',l')});
+    Brk(l,pubs,subs + {p_top_loc(t',l')});
 
 % Currently only synchronising with one of the publishers
 Prog = 
   allow( {sub},
   comm( {subS|subP|subB -> sub}
-      , Sub(l1,{}) ||
-        Pub(l2,emptyBuf) ||
-        Pub(l3,emptyBuf) ||
-        Brk(lbr,{},{})
+      , Sub(loc1,{}) ||
+		Sub(loc2,{}) ||
+        Pub(loc2,emptyB, []) ||
+        Pub(loc3,emptyB, []) ||	
+        Brk(locbr,{},{})
   ));
 
 
