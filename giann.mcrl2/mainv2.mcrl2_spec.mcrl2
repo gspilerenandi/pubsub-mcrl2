@@ -1,0 +1,147 @@
+sort
+    % fixed set of locations and topics
+    % locations are denoted by Loc
+    Loc = struct loc1 | loc2 | loc3 | locbr;
+    % topics are denoted by Top
+    Top = struct top1 | top2;
+    % data values used in the system
+    Ev = struct ev1 | ev2;
+
+    % used by the broker to store pubs and subs
+    loc_top = struct p_loc_top(location: Loc, topic: Top);
+    % set containing pairs of locations and topics
+    varrho = Set(loc_top);
+
+    top_loc = struct p_top_loc(topic': Top, location': Loc);
+    % set containing pairs of topics and locations
+    sigma = Set(top_loc);
+
+    % an event-buffer contains a list of sets of pairs of events and locations
+    % (topic,event,location)
+    top_ev_loc = struct c_top_ev_loc(get_top: Top, get_event: Ev, get_loc: Loc);
+    % E x L
+    TopxEvxLoc = Set(top_ev_loc);
+    B = List(TopxEvxLoc);
+
+    pub_top_sub = struct c_pub_top_subs(get_top_pub: Top, get_subs_pub: Set(Loc));
+    pub_T_x_pwrL = Set(pub_top_sub);
+
+% Auxiliary functions
+map
+    % used in the broker to add the relationship of a topic and a subscriber
+    add_top_loc: sigma # Top # Loc -> sigma;
+    % verifies if a pair of sub and a topic is stored in the broker
+   	in_Top_Loc: sigma # Top # Loc -> Bool;
+    % verifies if a topic is being subscribed by any subscriber
+   	sig_containsTop: sigma # Top -> Bool;
+    % appends a set of triples contaning a topic, an event and a subscriber that such event has to be sent to
+    %appendtoB: List(Set(top_ev_loc)) # Set(top_ev_loc) -> List(Set(top_ev_loc));
+    appendtoB: B # TopxEvxLoc -> B;
+    % used in the broker to add the relationship of a publisher and a topic
+  	add_loc_top: varrho # Loc # Top -> varrho;
+    %verifies if the pair of a publisher and a topic is stored in the broker
+  	in_loc_top: varrho # Loc # Top -> Bool;
+    % verifies if a topic is published on by any publisher
+  	vr_containsTop: varrho # Top -> Bool;
+    % updates the set of subscribers and topics
+    pub_subsupdate: pub_top_sub # Loc -> pub_top_sub;
+    pub_unsubsupdate: pub_top_sub # Loc -> pub_top_sub;
+    in_Top_Subs: pub_T_x_pwrL # pub_top_sub -> Bool;
+    add_top_to_pub: pub_T_x_pwrL # Top -> pub_T_x_pwrL;
+
+
+var t:Top;
+  	l:Loc;
+  	sigma':sigma;
+  	varrho':varrho;
+  	top_ev_loc': top_ev_loc;
+  	B': B;
+    tes: TopxEvxLoc;
+    pub_top_sub': pub_top_sub;
+    pub_T_x_pwrL': pub_T_x_pwrL;
+
+eqn % broker
+    %   sigma
+    add_top_loc(sigma',t,l) = sigma' + {p_top_loc(t,l)};
+    in_Top_Loc(sigma',t,l) = p_top_loc(t,l) in sigma';
+ 	  sig_containsTop(sigma',t) = exists l:Loc . p_top_loc(t,l) in sigma';
+    %   varrho
+    add_loc_top(varrho',l,t) = varrho' + {p_loc_top(l,t)};
+    in_loc_top(varrho',l,t) = p_loc_top(l,t) in varrho';
+    vr_containsTop(varrho',t) = exists l:Loc . p_loc_top(l,t) in varrho';
+    %   boot
+    %bootBroker =
+
+    % publisher
+    appendtoB(B', tes) = B' <| tes;
+    pub_subsupdate(pub_top_sub', l) = c_pub_top_subs(get_top_pub(pub_top_sub'), get_subs_pub(pub_top_sub') + {l});
+    pub_unsubsupdate(pub_top_sub', l) = c_pub_top_subs(get_top_pub(pub_top_sub'), get_subs_pub(pub_top_sub') - {l});
+    in_Top_Subs(pub_T_x_pwrL', pub_top_sub') = pub_top_sub' in pub_T_x_pwrL';
+    add_top_to_pub(pub_T_x_pwrL', t) = pub_T_x_pwrL' + {c_pub_top_subs(t, {})};
+
+act
+    a, b, c;
+    sub,  subP,  subS,  subB: Loc # Top;
+    unsub,unsubP,unsubS,unsubB: Loc # Top;
+    bootPub1, bootPub2, bootBrk, boot;
+    store, updateB;
+
+proc
+
+Pub = a.b.Pub;
+
+% Subscriber state:
+%  l - location
+%  psi_l - subscribed topics
+Sub(l:Loc, psi_l:Set(Top)) =
+ sum t':Top .
+   subS(l,t') . Sub(l,psi_l + {t'}) +
+ sum t':Top .
+   unsubS(l,t') . Sub(l,psi_l - {t'});
+
+% Publisher state:
+% lp - publisher's location
+% ptL - pair that represents topics and subscribers (topic, L)
+% b - list contaning sets of triples of (topic, event, subscriber)
+Pub(lp:Loc, p_TxL:pub_T_x_pwrL, b:B) =
+  sum p_tL: pub_top_sub, l':Loc.
+    subP(p_tL, l') .
+    if ( in_Top_Subs(p_TxL, p_tL), Pub(lp, (p_TxL - {p_tL}) + {pub_subsupdate(p_tL, l')}, b), Pub(lp, p_TxL, b) );
+    % does it need the false statement as well?
+
+% Broker state:
+%   l - location
+%   pubs: publishers  (locs) and their topics
+%   subs: subscribers (locs) and their topics
+Brk(l:Loc, pubs:varrho, subs: sigma) =
+  sum l':Loc,t':Top .
+    subB(l',t') .
+    Brk(l,pubs,subs + {p_top_loc(t',l')}) +
+  sum l':Loc,t':Top .
+    unsubB(l',t') .
+    Brk(l,pubs,subs - {p_top_loc(t',l')})
+;
+
+% Currently only synchronising with one of the publishers
+Prog =
+  allow( {sub, unsub},
+  	comm( {subS|subP|subB -> sub, unsubS|unsubP|unsubB -> unsub},
+        Sub(loc1,{}) ||
+		    Sub(loc2,{}) ||
+        Pub(loc2,{c_pub_top_subs(top1,{}), c_pub_top_subs(top2,{})}, []) ||
+        Pub(loc3,{c_pub_top_subs(top2,{})}, []) ||
+        Brk(locbr,{p_loc_top(loc2,top1),p_loc_top(loc2,top2),p_loc_top(loc3, top2)},{})
+  	)
+  );
+%(top1,{}),(top2,{})
+%(top2,{})
+%(loc2,top1),(loc2,top2),(loc3, op2)
+
+%%%%%%%
+
+init
+
+  %Sub(l1,{});
+  %Brk(l1,{},{});
+  %Pub(l1,emptyTopBuffer);
+  Prog;
