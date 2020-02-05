@@ -45,8 +45,13 @@ map
   % updates the set of subscribers and topics
   sub_tSubs: p_tSubs # Loc -> p_tSubs;
   unsub_tSubs: p_tSubs # Loc -> p_tSubs;
+  % verifies if a tSubs is a pair in a publisher
   in_TSUBS: s_TSUBS # p_tSubs -> Bool;
+  % adds a new topic to a publisher with an empty subscribers set
+  % not being used at the moment, as such info is being fixed at startup of the system
   add_tSubs: s_TSUBS # Top -> s_TSUBS;
+  % verifies if a topic exists in a publishers
+  %p_TSUBS_has_t: s_TSUBS # Top -> Bool;
 
 var
   t:Top;
@@ -59,12 +64,13 @@ var
   p_tSubs': p_tSubs;
   s_TSUBS': s_TSUBS;
 
-eqn % broker
-  %   sigma
+eqn
+  % broker
+  % sigma
   sig_add_p(sigma',t,l) = sigma' + {c_tl(t,l)};
   in_sig(sigma',t,l) = c_tl(t,l) in sigma';
-	  sig_has_t(sigma',t) = exists l:Loc . c_tl(t,l) in sigma';
-  %   varrho
+	sig_has_t(sigma',t) = exists l:Loc . c_tl(t,l) in sigma';
+  % varrho
   vr_add_p(varrho',l,t) = varrho' + {c_lt(l,t)};
   in_vr(varrho',l,t) = c_lt(l,t) in varrho';
   vr_has_t(varrho',t) = exists l:Loc . c_lt(l,t) in varrho';
@@ -75,6 +81,8 @@ eqn % broker
   unsub_tSubs(p_tSubs', l) = c_tSubs(get_t(p_tSubs'), get_Subs(p_tSubs') - {l});
   in_TSUBS(s_TSUBS', p_tSubs') = p_tSubs' in s_TSUBS';
   add_tSubs(s_TSUBS', t) = s_TSUBS' + {c_tSubs(t, {})};
+  % working on this one
+  %teste(p_TxL, ) =
 
 act
   a, b, c;
@@ -92,9 +100,10 @@ Pub = a.b.Pub;
 %  psi_l - subscribed topics
 Sub(l:Loc, psi_l:Set(Top)) =
   sum t':Top .
-   subS(l,t') . Sub(l,psi_l + {t'}) +
+    subS(l,t') . Sub(l,psi_l + {t'})
+  +
   sum t':Top .
-   unsubS(l,t') . Sub(l,psi_l - {t'});
+    unsubS(l,t') . Sub(l,psi_l - {t'});
 
 % Publisher state:
 % lp - publisher's location
@@ -102,12 +111,19 @@ Sub(l:Loc, psi_l:Set(Top)) =
 % b - list contaning sets of triples of (topic, event, subscriber)
 Pub(lp:Loc, p_TxL:s_TSUBS, b:B) =
   %sum p_tL: p_tSubs, l':Loc.
-  sum l':Loc, t': Top, L': Set(Loc).
-    %subP(p_tL, l') .
+  sum l':Loc, t': Top , L':Set(Loc).
     subP(l', t') .
-    %if(exists L':Set(Loc).c_tSubs(t',L') in p_TxL,
-      Pub(lp, (p_TxL - {c_tSubs(t',L')}) + {sub_tSubs(c_tSubs(t',L'), l')}, b);
-      %Pub(lp, p_TxL, b) );
+      (c_tSubs(t',L') in p_TxL) ->
+        Pub(lp, (p_TxL - {c_tSubs(t',L')}) + {sub_tSubs(c_tSubs(t',L'), l')}, b)
+        <>
+        Pub(lp, p_TxL, b)
+  +
+  sum l':Loc, t': Top , L':Set(Loc).
+    unsubP(l', t') .
+      (c_tSubs(t',L') in p_TxL) ->
+        Pub(lp, (p_TxL - {c_tSubs(t',L')}) + {unsub_tSubs(c_tSubs(t',L'), l')}, b)
+        <>
+        Pub(lp, p_TxL, b);
 
 % Broker state:
 %   l - location
@@ -117,7 +133,8 @@ Pub(lp:Loc, p_TxL:s_TSUBS, b:B) =
 Brk(l:Loc, pubs:varrho, subs: sigma) =
   sum l':Loc,t':Top .
     subB(l',t') .
-    Brk(l,pubs,subs + {c_tl(t',l')}) +
+    Brk(l,pubs,subs + {c_tl(t',l')})
+  +
   sum l':Loc,t':Top .
     unsubB(l',t') .
     Brk(l,pubs,subs - {c_tl(t',l')})
@@ -125,7 +142,7 @@ Brk(l:Loc, pubs:varrho, subs: sigma) =
 
 Prog =
   allow( {sub, unsub},
-  	comm( {subS|subB|subP -> sub, unsubS|unsubB -> unsub},
+  	comm( {subS|subB|subP -> sub, unsubS|unsubB|unsubP -> unsub},
       Sub(loc1,{}) ||
 		  Sub(loc2,{}) ||
       Pub(loc2,{c_tSubs(top1,{}), c_tSubs(top2,{})}, []) ||
