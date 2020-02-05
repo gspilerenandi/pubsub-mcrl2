@@ -1,90 +1,87 @@
 sort
-    % fixed set of locations and topics
-    % locations are denoted by Loc
-    Loc = struct loc1 | loc2 | loc3 | locbr;
-    % topics are denoted by Top
-    Top = struct top1 | top2;
-    % data values used in the system
-    Ev = struct ev1 | ev2;
+  % fixed set of locations and topics
+  % locations are denoted by Loc
+  Loc = struct loc1 | loc2 | loc3 | locbr;
+  % topics are denoted by Top
+  Top = struct top1 | top2;
+  % data values used in the system
+  Ev = struct ev1 | ev2;
 
-    % used by the broker to store pubs and subs
-    p_lt = struct c_lt(get_l: Loc, get_t: Top);
-    % set containing pairs of locations and topics
-    varrho = Set(p_lt);
+  % used by the broker to store pubs and subs
+  p_lt = struct c_lt(get_l: Loc, get_t: Top);
+  % set containing pairs of locations and topics
+  varrho = Set(p_lt);
 
-    p_tl = struct c_tl(get_t: Top, get_l: Loc);
-    % set containing pairs of topics and locations
-    sigma = Set(p_tl);
+  p_tl = struct c_tl(get_t: Top, get_l: Loc);
+  % set containing pairs of topics and locations
+  sigma = Set(p_tl);
 
-    % an event-buffer contains a list of sets of pairs of events and locations
-    % (topic,event,location)
-    t_tel = struct c_tel(get_t: Top, gte_e: Ev, get_l: Loc);
-    % E x L
-    s_TEL = Set(t_tel);
-    B = List(s_TEL);
+  % an event-buffer contains a list of sets of pairs of events and locations
+  % (topic,event,location)
+  t_tel = struct c_tel(get_t: Top, gte_e: Ev, get_l: Loc);
+  % E x L
+  s_TEL = Set(t_tel);
+  B = List(s_TEL);
 
-    p_tSubs = struct c_tSubs(get_t: Top, get_Subs: Set(Loc));
-    s_TSUBS = Set(p_tSubs);
+  p_tSubs = struct c_tSubs(get_t: Top, get_Subs: Set(Loc));
+  s_TSUBS = Set(p_tSubs);
 
 % Auxiliary functions
 map
-    % used in the broker to add the relationship of a topic and a subscriber
-    sig_add_p: sigma # Top # Loc -> sigma;
-    % verifies if a pair of sub and a topic is stored in the broker
-   	in_sig: sigma # Top # Loc -> Bool;
-    % verifies if a topic is being subscribed by any subscriber
-   	sig_has_t: sigma # Top -> Bool;
-    % appends a set of triples contaning a topic, an event and a subscriber that such event has to be sent to
-    %append_to_B: List(Set(t_tel)) # Set(t_tel) -> List(Set(t_tel));
-    append_to_B: B # s_TEL -> B;
-    % used in the broker to add the relationship of a publisher and a topic
-  	vr_add_p: varrho # Loc # Top -> varrho;
-    %verifies if the pair of a publisher and a topic is stored in the broker
-  	in_vr: varrho # Loc # Top -> Bool;
-    % verifies if a topic is published on by any publisher
-  	vr_has_t: varrho # Top -> Bool;
-    % updates the set of subscribers and topics
-    sub_tSubs: p_tSubs # Loc -> p_tSubs;
-    unsub_tSubs: p_tSubs # Loc -> p_tSubs;
-    in_TSUBS: s_TSUBS # p_tSubs -> Bool;
-    add_tSubs: s_TSUBS # Top -> s_TSUBS;
+  % used in the broker to add the relationship of a topic and a subscriber
+  sig_add_p: sigma # Top # Loc -> sigma;
+  % verifies if a pair of sub and a topic is stored in the broker
+ 	in_sig: sigma # Top # Loc -> Bool;
+  % verifies if a topic is being subscribed by any subscriber
+ 	sig_has_t: sigma # Top -> Bool;
+  % appends a set of triples contaning a topic, an event and a subscriber that such event has to be sent to
+  append_to_B: B # s_TEL -> B;
+  % used in the broker to add the relationship of a publisher and a topic
+	vr_add_p: varrho # Loc # Top -> varrho;
+  %verifies if the pair of a publisher and a topic is stored in the broker
+	in_vr: varrho # Loc # Top -> Bool;
+  % verifies if a topic is published on by any publisher
+	vr_has_t: varrho # Top -> Bool;
+  % updates the set of subscribers and topics
+  sub_tSubs: p_tSubs # Loc -> p_tSubs;
+  unsub_tSubs: p_tSubs # Loc -> p_tSubs;
+  in_TSUBS: s_TSUBS # p_tSubs -> Bool;
+  add_tSubs: s_TSUBS # Top -> s_TSUBS;
 
-
-var t:Top;
-  	l:Loc;
-  	sigma':sigma;
-  	varrho':varrho;
-  	t_tel': t_tel;
-  	B': B;
-    tes: s_TEL;
-    p_tSubs': p_tSubs;
-    s_TSUBS': s_TSUBS;
+var
+  t:Top;
+	l:Loc;
+	sigma':sigma;
+	varrho':varrho;
+	t_tel': t_tel;
+	B': B;
+  tes: s_TEL;
+  p_tSubs': p_tSubs;
+  s_TSUBS': s_TSUBS;
 
 eqn % broker
-    %   sigma
-    sig_add_p(sigma',t,l) = sigma' + {c_tl(t,l)};
-    in_sig(sigma',t,l) = c_tl(t,l) in sigma';
- 	  sig_has_t(sigma',t) = exists l:Loc . c_tl(t,l) in sigma';
-    %   varrho
-    vr_add_p(varrho',l,t) = varrho' + {c_lt(l,t)};
-    in_vr(varrho',l,t) = c_lt(l,t) in varrho';
-    vr_has_t(varrho',t) = exists l:Loc . c_lt(l,t) in varrho';
-    %   boot
-    %bootBroker =
+  %   sigma
+  sig_add_p(sigma',t,l) = sigma' + {c_tl(t,l)};
+  in_sig(sigma',t,l) = c_tl(t,l) in sigma';
+	  sig_has_t(sigma',t) = exists l:Loc . c_tl(t,l) in sigma';
+  %   varrho
+  vr_add_p(varrho',l,t) = varrho' + {c_lt(l,t)};
+  in_vr(varrho',l,t) = c_lt(l,t) in varrho';
+  vr_has_t(varrho',t) = exists l:Loc . c_lt(l,t) in varrho';
 
-    % publisher
-    append_to_B(B', tes) = B' <| tes;
-    sub_tSubs(p_tSubs', l) = c_tSubs(get_t(p_tSubs'), get_Subs(p_tSubs') + {l});
-    unsub_tSubs(p_tSubs', l) = c_tSubs(get_t(p_tSubs'), get_Subs(p_tSubs') - {l});
-    in_TSUBS(s_TSUBS', p_tSubs') = p_tSubs' in s_TSUBS';
-    add_tSubs(s_TSUBS', t) = s_TSUBS' + {c_tSubs(t, {})};
+  % publisher
+  append_to_B(B', tes) = B' <| tes;
+  sub_tSubs(p_tSubs', l) = c_tSubs(get_t(p_tSubs'), get_Subs(p_tSubs') + {l});
+  unsub_tSubs(p_tSubs', l) = c_tSubs(get_t(p_tSubs'), get_Subs(p_tSubs') - {l});
+  in_TSUBS(s_TSUBS', p_tSubs') = p_tSubs' in s_TSUBS';
+  add_tSubs(s_TSUBS', t) = s_TSUBS' + {c_tSubs(t, {})};
 
 act
-    a, b, c;
-    sub,  subP,  subS,  subB: Loc # Top;
-    unsub,unsubP,unsubS,unsubB: Loc # Top;
-    bootPub1, bootPub2, bootBrk, boot;
-    store, updateB;
+  a, b, c;
+  sub,  subP,  subS,  subB: Loc # Top;
+  unsub,unsubP,unsubS,unsubB: Loc # Top;
+  bootPub1, bootPub2, bootBrk, boot;
+  store, updateB;
 
 proc
 
@@ -94,9 +91,9 @@ Pub = a.b.Pub;
 %  l - location
 %  psi_l - subscribed topics
 Sub(l:Loc, psi_l:Set(Top)) =
- sum t':Top .
+  sum t':Top .
    subS(l,t') . Sub(l,psi_l + {t'}) +
- sum t':Top .
+  sum t':Top .
    unsubS(l,t') . Sub(l,psi_l - {t'});
 
 % Publisher state:
@@ -116,6 +113,7 @@ Pub(lp:Loc, p_TxL:s_TSUBS, b:B) =
 %   l - location
 %   pubs: publishers  (locs) and their topics
 %   subs: subscribers (locs) and their topics
+%   still missing the sync buffer
 Brk(l:Loc, pubs:varrho, subs: sigma) =
   sum l':Loc,t':Top .
     subB(l',t') .
@@ -125,15 +123,14 @@ Brk(l:Loc, pubs:varrho, subs: sigma) =
     Brk(l,pubs,subs - {c_tl(t',l')})
 ;
 
-% Currently only synchronising with one of the publishers
 Prog =
   allow( {sub, unsub},
-  	comm( {subS|subP|subB -> sub, unsubS|unsubP|unsubB -> unsub},
-        Sub(loc1,{}) ||
-		    Sub(loc2,{}) ||
-        Pub(loc2,{c_tSubs(top1,{}), c_tSubs(top2,{})}, []) ||
-        Pub(loc3,{c_tSubs(top2,{})}, []) ||
-        Brk(locbr,{c_lt(loc2,top1),c_lt(loc2,top2),c_lt(loc3, top2)},{})
+  	comm( {subS|subB|subP -> sub, unsubS|unsubB -> unsub},
+      Sub(loc1,{}) ||
+		  Sub(loc2,{}) ||
+      Pub(loc2,{c_tSubs(top1,{}), c_tSubs(top2,{})}, []) ||
+      Pub(loc3,{c_tSubs(top2,{})}, []) ||
+      Brk(locbr,{c_lt(loc2,top1),c_lt(loc2,top2),c_lt(loc3, top2)},{})
   	)
   );
 %(top1,{}),(top2,{})
@@ -143,7 +140,6 @@ Prog =
 %%%%%%%
 
 init
-
   %Sub(l1,{});
   %Brk(l1,{},{});
   %Pub(l1,emptyTopBuffer);
