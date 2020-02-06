@@ -1,7 +1,8 @@
 sort
   % fixed set of locations and topics
   % locations are denoted by Loc
-  Loc = struct loc1 | loc2 | loc3 | locbr;
+  Loc = struct loc1 | loc2 ;
+  %Loc = struct loc1 | loc2 | loc3 | locbr;
   % topics are denoted by Top
   Top = struct top1 | top2;
   % data values used in the system
@@ -50,8 +51,6 @@ map
   % adds a new topic to a publisher with an empty subscribers set
   % not being used at the moment, as such info is being fixed at startup of the system
   add_tSubs: s_TSUBS # Top -> s_TSUBS;
-  % verifies if a topic exists in a publishers
-  %p_TSUBS_has_t: s_TSUBS # Top -> Bool;
 
 var
   t:Top;
@@ -81,15 +80,12 @@ eqn
   unsub_tSubs(p_tSubs', l) = c_tSubs(get_t(p_tSubs'), get_Subs(p_tSubs') - {l});
   in_TSUBS(s_TSUBS', p_tSubs') = p_tSubs' in s_TSUBS';
   add_tSubs(s_TSUBS', t) = s_TSUBS' + {c_tSubs(t, {})};
-  % working on this one
-  %teste(p_TxL, ) =
 
 act
   a, b, c;
   sub,  subP,  subS,  subB: Loc # Top;
   unsub,unsubP,unsubS,unsubB: Loc # Top;
-  bootPub1, bootPub2, bootBrk, boot;
-  store, updateB;
+  %store, updateB;
 
 proc
 
@@ -110,13 +106,15 @@ Sub(l:Loc, psi_l:Set(Top)) =
 % p_tl - pair that represents topics and subscribers (topic, L)
 % b - list contaning sets of triples of (topic, event, subscriber)
 Pub(lp:Loc, p_TxL:s_TSUBS, b:B) =
-  %sum p_tL: p_tSubs, l':Loc.
   sum l':Loc, t': Top , L':Set(Loc).
     subP(l', t') .
-      (c_tSubs(t',L') in p_TxL) ->
-        Pub(lp, (p_TxL - {c_tSubs(t',L')}) + {sub_tSubs(c_tSubs(t',L'), l')}, b)
+      (c_tSubs(t',{}) in p_TxL) ->
+        Pub(lp, p_TxL  + {sub_tSubs(c_tSubs(t',L'), l')}, b)
         <>
-        Pub(lp, p_TxL, b)
+        (c_tSubs(t', L') in p_TxL) ->
+          Pub(lp, (p_TxL - {c_tSubs(t',L')}) + {sub_tSubs(c_tSubs(t',L'), l')}, b)
+          <>
+          Pub(lp, p_TxL, b)
   +
   sum l':Loc, t': Top , L':Set(Loc).
     unsubP(l', t') .
@@ -144,15 +142,13 @@ Prog =
   allow( {sub, unsub},
   	comm( {subS|subB|subP -> sub, unsubS|unsubB|unsubP -> unsub},
       Sub(loc1,{}) ||
-		  Sub(loc2,{}) ||
+		  %Sub(loc2,{}) ||
       Pub(loc2,{c_tSubs(top1,{}), c_tSubs(top2,{})}, []) ||
-      Pub(loc3,{c_tSubs(top2,{})}, []) ||
-      Brk(locbr,{c_lt(loc2,top1),c_lt(loc2,top2),c_lt(loc3, top2)},{})
+      %Pub(loc3,{c_tSubs(top2,{})}, []) ||
+      Brk(loc1,{c_lt(loc2,top1),c_lt(loc2,top2)},{})
+      %Brk(locbr,{c_lt(loc2,top1),c_lt(loc2,top2),c_lt(loc3, top2)},{})
   	)
   );
-%(top1,{}),(top2,{})
-%(top2,{})
-%(loc2,top1),(loc2,top2),(loc3, op2)
 
 %%%%%%%
 
