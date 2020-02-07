@@ -2,6 +2,7 @@ sort
   % fixed set of locations and topics
   % locations are denoted by Loc
   Loc = struct loc1 | loc2 ;
+  MbLoc = struct L(get_loc:Loc) | nil;
   %Loc = struct loc1 | loc2 | loc3 | locbr;
   % topics are denoted by Top
   Top = struct top1 | top2;
@@ -24,7 +25,7 @@ sort
   s_TEL = Set(t_tel);
   B = List(s_TEL);
 
-  p_tSubs = struct c_tSubs(get_t: Top, get_Subs: Set(Loc));
+  p_tSubs = struct c_tSubs(get_t': Top, get_Subs: Set(Loc));
   s_TSUBS = Set(p_tSubs);
 
 % Auxiliary functions
@@ -51,6 +52,7 @@ map
   % adds a new topic to a publisher with an empty subscribers set
   % not being used at the moment, as such info is being fixed at startup of the system
   add_tSubs: s_TSUBS # Top -> s_TSUBS;
+  teste: Top # s_TSUBS -> s_TSUBS;
 
 var
   t:Top;
@@ -62,6 +64,7 @@ var
   tes: s_TEL;
   p_tSubs': p_tSubs;
   s_TSUBS': s_TSUBS;
+  p_TxL': s_TSUBS;
 
 eqn
   % broker
@@ -76,10 +79,14 @@ eqn
 
   % publisher
   append_to_B(B', tes) = B' <| tes;
-  sub_tSubs(p_tSubs', l) = c_tSubs(get_t(p_tSubs'), get_Subs(p_tSubs') + {l});
-  unsub_tSubs(p_tSubs', l) = c_tSubs(get_t(p_tSubs'), get_Subs(p_tSubs') - {l});
+  sub_tSubs(p_tSubs', l) = c_tSubs(get_t'(p_tSubs'), get_Subs(p_tSubs') + {l});
+  unsub_tSubs(p_tSubs', l) = c_tSubs(get_t'(p_tSubs'), get_Subs(p_tSubs') - {l});
   in_TSUBS(s_TSUBS', p_tSubs') = p_tSubs' in s_TSUBS';
   add_tSubs(s_TSUBS', t) = s_TSUBS' + {c_tSubs(t, {})};
+
+  teste(t,p_TxL') =  {y: s_TSUBS | get_t'(p_TxL') == t};
+
+  %(exists L':Set(Loc).(p_TxL' - {c_tSubs(get_t(t),get_Subs(L'))})) + {sub_tSubs(c_tSubs(get_t(t),get_Subs(L')), l)};
 
 act
   a, b, c;
@@ -106,15 +113,9 @@ Sub(l:Loc, psi_l:Set(Top)) =
 % p_tl - pair that represents topics and subscribers (topic, L)
 % b - list contaning sets of triples of (topic, event, subscriber)
 Pub(lp:Loc, p_TxL:s_TSUBS, b:B) =
-  sum l':Loc, t': Top , L':Set(Loc).
+  sum l':Loc, t': Top .
     subP(l', t') .
-      (c_tSubs(t',{}) in p_TxL) ->
-        Pub(lp, p_TxL  + {sub_tSubs(c_tSubs(t',L'), l')}, b)
-        <>
-        (c_tSubs(t', L') in p_TxL) ->
-          Pub(lp, (p_TxL - {c_tSubs(t',L')}) + {sub_tSubs(c_tSubs(t',L'), l')}, b)
-          <>
-          Pub(lp, p_TxL, b)
+      Pub(lp, (p_TxL - {teste(t', p_TxL)}) + c_tSubs(get_t'(teste(t', p_TxL)),get_Subs(teste(t', p_TxL)) + {l'}), b)
   +
   sum l':Loc, t': Top , L':Set(Loc).
     unsubP(l', t') .
