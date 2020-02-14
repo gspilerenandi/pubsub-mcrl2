@@ -86,6 +86,7 @@ eqn
 
   %teste(t,p_TxL') =  {y: p_tSubs | get_t'(p_TxL') == t};
   teste(t,p_TxL') =  {y: p_tSubs | y in p_TxL' && get_t'(y) == t};
+  find() = if()
 
   %(exists L':Set(Loc).(p_TxL' - {c_tSubs(get_t(t),get_Subs(L'))})) + {sub_tSubs(c_tSubs(get_t(t),get_Subs(L')), l)};
 
@@ -99,7 +100,7 @@ proc
 
 %Pub = a.b.Pub;
 
-Test(p_TxL:s_TSUBS) = a . Test( teste(top1,p_TxL) ) ;
+%Test(p_TxL:s_TSUBS) = a . Test( teste(top1,p_TxL) ) ;
 
 % Subscriber state:
 %  l - location
@@ -118,8 +119,8 @@ Sub(l:Loc, psi_l:Set(Top)) =
 Pub(lp:Loc, p_TxL:s_TSUBS, b:B) =
   sum l':Loc, t': Top .
     subP(l', t') .
-      % Pub(lp, (p_TxL - {teste(t', p_TxL)}) + c_tSubs(get_t'(teste(t', p_TxL)),get_Subs(teste(t', p_TxL)) + {l'}), b)
-        Pub(lp, p_TxL, b)
+      Pub(lp, (p_TxL - teste(t', p_TxL)) + c_tSubs(get_t'(teste(t', p_TxL)), get_Subs(teste(t', p_TxL)) + {l'}), b)
+        %Pub(lp, p_TxL, b)
 
   +
   sum l':Loc, t': Top , L':Set(Loc).
@@ -162,5 +163,5 @@ init
   %Sub(l1,{});
   %Brk(l1,{},{});
   %Pub(l1,emptyTopBuffer);
-  %Prog;
-  Test({ c_tSubs(top2,{}) , c_tSubs(top1,{loc1}) });
+  Prog;
+  %Test({ c_tSubs(top2,{}) , c_tSubs(top1,{loc1}) });

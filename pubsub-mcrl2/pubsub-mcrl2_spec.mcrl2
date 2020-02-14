@@ -10,7 +10,7 @@ sort
   % Used by the publisher to store outgoing data
   BPL = struct bpl(getB:List(Int),getBLocs:Set(Loc));
   TopBuffer = Top -> BPL;
-  
+
 
 % Auxiliary functions
 map addTL: TopLocs # Top # Loc -> TopLocs;
@@ -51,7 +51,7 @@ Sub(l:Loc,ts:Set(Top)) =
 
 % Publisher state:
 %   l - location
-%   tb - buffer of topics (topic -> B x Set(Loc)) 
+%   tb - buffer of topics (topic -> B x Set(Loc))
 Pub(l:Loc,tb:TopBuffer) =
  sum l':Loc, t':Top .
    subP(l' ,t') .
@@ -62,13 +62,13 @@ Pub(l:Loc,tb:TopBuffer) =
 %   l - location
 %   pubs: publishers  (locs) and their topics
 %   subs: subscribers (locs) and their topics
-Brk(l:Loc, pubs:TopLocs, subs: TopLocs) = 
+Brk(l:Loc, pubs:TopLocs, subs: TopLocs) =
   sum l':Loc,t':Top .
     subB(l',t') .
     Brk(l,pubs,subs + {topLoc(t',l')});
 
 % Currently only synchronising with one of the publishers
-Prog = 
+Prog =
   allow( {sub},
   comm( {subS|subP|subB -> sub}
       , Sub(l1,{}) ||
