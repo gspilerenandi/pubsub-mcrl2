@@ -2,7 +2,7 @@ sort
   % fixed set of locations and topics
   % locations are denoted by Loc
   %Loc = struct loc1 | loc2 ;
-  Loc = struct loc1 | loc2 | loc3 | locbrk;
+  Loc = struct loc1 | loc2 | loc3 | loc4 | locbrk;
 
   % topics are denoted by Top
   Top = struct top1 | top2;
@@ -11,11 +11,7 @@ sort
 
   % mapping from a topic to a set of locations
   M_tL = Top -> Set(Loc); % ~~ Top x Loc
-  % set containing pair of topics and sets of locations
-  sigma = Loc -> M_tL;
-  rho = Loc -> M_tL;
 
-  % an event-buffer contains a list of sets of pairs of events and locations
   % (topic,event,location)
   t_tel = struct c_tel(get_t: Top, gte_e: Ev, get_l: Loc);
   % E x L
@@ -23,60 +19,46 @@ sort
   B = List(s_TEL);
   % maps a location to an event-buffer
   l_m_B = Loc -> B;
-  s_TSUBS = Set(M_tL);
 
 % Auxiliary functions
 map
-  chi_sub_l: M_tL # Top # Loc -> M_tL;
-  chi_unsub_l: M_tL # Top # Loc -> M_tL;
-  emptyLocSet: Set(Loc);
-  emptytLoc: M_tL;
+  sub_l: M_tL # Top # Loc -> M_tL;
+  unsub_l: M_tL # Top # Loc -> M_tL;
+  empty_LocSet: Set(Loc);
+  empty_tLoc: M_tL;
+  add_pub_t: M_tL # Top # Loc -> M_tL;
+  remov_pub_t: M_tL # Top # Loc -> M_tL;
 
-  rho_add_l: Loc # Top # Loc -> rho;
-  P_add_s: sigma # Loc # Top # Loc -> sigma;
-%  add_l2: Loc # Top # Loc -> sigma;
-%  append_to_B: B # s_TEL -> B;
-%	vr_add_p: rho # Loc # Top -> rho;
-%  sub_tSubs: p_tSubs # Loc -> p_tSubs;
-%  in_TSUBS: s_TSUBS # p_tSubs -> Bool;
-%  teste: Top # s_TSUBS -> s_TSUBS;
+  in_tL: Top # Loc -> Bool;
 
 var
   t:Top;
-	l:Loc;
-  lb:Loc;
-  ls:Loc;
-	sigma':sigma;
-	rho':rho;
+	l, lb, ls:Loc;
 	t_tel': t_tel;
 	B': B;
   tes: s_TEL;
-  %p_tSubs': p_tSubs;a
-  s_TSUBS': s_TSUBS;
-  p_TxL': s_TSUBS;
-  tzin: Set(M_tL);
   chi: M_tL;
 
-
 eqn
-  chi_sub_l(chi,t, ls) = chi[t -> chi(t) + {ls}];
-  chi_unsub_l(chi,t, ls) = chi[t -> chi(t) - {ls}];
+  sub_l(chi, t, ls) = chi[t -> chi(t) + {ls}];
+  unsub_l(chi, t, ls) = chi[t -> chi(t) - {ls}];
   %sig_add_l(sigma', lb, t, ls) = sigma'[ lb -> sigma'(lb)[t -> (sigma'(lb))(t) + {ls}]];
-  emptyLocSet = {};
-  emptytLoc = lambda t:Top.emptyLocSet;
+  add_pub_t(chi, t, ls) = chi[t -> chi(t) + {ls}];
+  remov_pub_t(chi, t, ls) = chi[t -> chi(t) - {ls}];
 
-  %rho_add_l(lb, t, lp) = {lb[t -> pubs + {lp}]};
-  %P_add_s(lp, t, ls) = {lp[t -> subs + {ls}]};
-  % publisher
+  empty_LocSet = {};
+  empty_tLoc = lambda t:Top.empty_LocSet;
+
+  %in_tL(chi, t, ls) = exists chi[t -> chi(ls)] in chi;
+
   %append_to_B(B', tes) = B' <| tes;
-  %sub_tSubs(p_tSubs', l) = c_tSubs(get_t'(p_tSubs'), get_Subs(p_tSubs') + {l});
-  %in_TSUBS(s_TSUBS', p_tSubs') = p_tSubs' in s_TSUBS';
   %teste(t,p_TxL') =  {y: p_tSubs | y in p_TxL' && get_t'(y) == t};
 
 act
   a, b, c;
   sub,  subP,  subS,  subB: Loc # Top;
   unsub,unsubP,unsubS,unsubB: Loc # Top;
+  addpubt,removpubt: Loc # Top;
 
 proc
 
@@ -85,10 +67,10 @@ proc
 %  psi_l - subscribed topics
 Sub(ls:Loc, psi_l:Set(Top)) =
   sum t':Top .
-    subS(ls,t') . Sub(ls,psi_l + {t'})
+    subS(ls, t') . Sub(ls, psi_l + {t'})
   +
   sum t':Top .
-    unsubS(ls,t') . Sub(ls,psi_l - {t'})
+    unsubS(ls, t') . Sub(ls, psi_l - {t'})
 ;
 
 % Publisher state:
@@ -98,11 +80,11 @@ Sub(ls:Loc, psi_l:Set(Top)) =
 Pub(lp:Loc, chi: M_tL, b:B) =
   sum l':Loc, t': Top .
     subP(l', t') .
-      Pub(lp, chi_sub_l(chi, t', l'), b)
+      Pub(lp, sub_l(chi, t', l'), b)
   +
   sum l':Loc, t': Top .
     unsubP(l', t') .
-      Pub(lp, chi_unsub_l(chi, t', l'), b)
+      Pub(lp, unsub_l(chi, t', l'), b)
 ;
 
 % Broker state:
@@ -113,22 +95,32 @@ Pub(lp:Loc, chi: M_tL, b:B) =
 Brk(lb:Loc, rho: M_tL, sigma: M_tL) =
   sum l':Loc,t':Top .
     subB(l',t') .
-    Brk(lb, rho, chi_sub_l(sigma, t', l'))
+    Brk(lb, rho, sub_l(sigma, t', l'))
   +
   sum l':Loc,t':Top .
     unsubB(l',t') .
-    Brk(lb, rho, chi_unsub_l(sigma, t', l'))
+    Brk(lb, rho, unsub_l(sigma, t', l'))
+  +
+  sum l':Loc,t':Top .
+    addpubt(l',t') .
+    Brk(lb, add_pub_t(rho, t', l'), sigma)
+  +
+  sum l':Loc,t':Top .
+    removpubt(l',t') .
+    Brk(lb, remov_pub_t(rho, t', l'), sigma)
 ;
 
 Prog =
-  allow( {sub, unsub},
+  allow( {sub, unsub, addpubt, removpubt},
   	comm( {subS|subB|subP -> sub, unsubS|unsubB|unsubP -> unsub},
-      Sub(loc1,{}) ||
-      Pub(loc2, emptytLoc, []) ||
-      Pub(loc3, emptytLoc, []) ||
-      Brk(locbrk, emptytLoc, emptytLoc)
+      Sub(loc1, {}) ||
+      Sub(loc4, {}) ||
+      Pub(loc2, empty_tLoc, []) ||
+      Pub(loc3, empty_tLoc, []) ||
+      Brk(locbrk, empty_tLoc, empty_tLoc)
   	)
-  );
+  )
+;
 
 %%%%%%%
 init
