@@ -13,7 +13,7 @@ sort
   M_tL = Top -> Set(Loc); % ~~ Top x Loc
 
   % (topic,event,location)
-  t_tel = struct c_tel(get_t: Top, gte_e: Ev, get_l: Loc);
+  t_tel = struct c_tel(get_t: Top, get_e: Ev, get_l: Loc);
   % E x L
   s_TEL = Set(t_tel);
   B = List(s_TEL);
@@ -22,15 +22,23 @@ sort
 
 % Auxiliary functions
 map
+
   sub_l: M_tL # Top # Loc -> M_tL;
   unsub_l: M_tL # Top # Loc -> M_tL;
+
+  % boot maps
   empty_LocSet: Set(Loc);
   empty_tLoc: M_tL;
+
+  % adding and removing relationships of topics and publishers in the broker
   add_pub_t: M_tL # Top # Loc -> M_tL;
   remov_pub_t: M_tL # Top # Loc -> M_tL;
 
-  in_tL: Top # Loc -> Bool;
+  % verifies if a Loc is NOT part of a set of Locs
+  not_in_tL: Set(Loc) # Loc -> Bool;
 
+
+  fillB: Ev # Top # Set(Loc) -> Set(t_tel);
 var
   t:Top;
 	l, lb, ls:Loc;
@@ -38,19 +46,22 @@ var
 	B': B;
   tes: s_TEL;
   chi: M_tL;
+  L': Set(Loc);
+  ev': Ev;
 
 eqn
   sub_l(chi, t, ls) = chi[t -> chi(t) + {ls}];
   unsub_l(chi, t, ls) = chi[t -> chi(t) - {ls}];
-  %sig_add_l(sigma', lb, t, ls) = sigma'[ lb -> sigma'(lb)[t -> (sigma'(lb))(t) + {ls}]];
+
   add_pub_t(chi, t, ls) = chi[t -> chi(t) + {ls}];
   remov_pub_t(chi, t, ls) = chi[t -> chi(t) - {ls}];
 
   empty_LocSet = {};
   empty_tLoc = lambda t:Top.empty_LocSet;
 
-  %in_tL(chi, t, ls) = exists chi[t -> chi(ls)] in chi;
+  not_in_tL(L', ls) = !(ls in L');
 
+  fillB(ev', t, L') = {b: t_tel | get_t(b) == t && get_e(b) == ev' && get_l(b) in L'};
   %append_to_B(B', tes) = B' <| tes;
   %teste(t,p_TxL') =  {y: p_tSubs | y in p_TxL' && get_t'(y) == t};
 
@@ -59,6 +70,7 @@ act
   sub,  subP,  subS,  subB: Loc # Top;
   unsub,unsubP,unsubS,unsubB: Loc # Top;
   addpubt,removpubt: Loc # Top;
+  store: Top # Ev;
 
 proc
 
@@ -66,11 +78,13 @@ proc
 %  l - location
 %  psi_l - subscribed topics
 Sub(ls:Loc, psi_l:Set(Top)) =
-  sum t':Top .
-    subS(ls, t') . Sub(ls, psi_l + {t'})
+  sum t':Top
+    . subS(ls, t')
+      . Sub(ls, psi_l + {t'})
   +
-  sum t':Top .
-    unsubS(ls, t') . Sub(ls, psi_l - {t'})
+  sum t':Top
+    . unsubS(ls, t')
+      . Sub(ls, psi_l - {t'})
 ;
 
 % Publisher state:
@@ -78,13 +92,17 @@ Sub(ls:Loc, psi_l:Set(Top)) =
 % p_tl - pair that represents topics and subscribers (topic, L)
 % b - list contaning sets of triples of (topic, event, subscriber)
 Pub(lp:Loc, chi: M_tL, b:B) =
-  sum l':Loc, t': Top .
-    subP(l', t') .
-      Pub(lp, sub_l(chi, t', l'), b)
+  sum l':Loc, t': Top
+    . subP(l', t')
+      . (lp != l') -> Pub(lp, sub_l(chi, t', l'), b)
   +
-  sum l':Loc, t': Top .
-    unsubP(l', t') .
-      Pub(lp, unsub_l(chi, t', l'), b)
+  sum l':Loc, t': Top
+    . unsubP(l', t')
+      . Pub(lp, unsub_l(chi, t', l'), b)
+  +
+  sum t': Top, ev': Ev
+    . store(t', ev')
+      . Pub(lp, chi, b <| fillB(ev', t', chi(t')))
 ;
 
 % Broker state:
@@ -93,25 +111,25 @@ Pub(lp:Loc, chi: M_tL, b:B) =
 %   subs: subscribers (locs) and their topics
 %   still missing the sync buffer
 Brk(lb:Loc, rho: M_tL, sigma: M_tL) =
-  sum l':Loc,t':Top .
-    subB(l',t') .
-    Brk(lb, rho, sub_l(sigma, t', l'))
+  sum l':Loc,t':Top
+    . subB(l',t')
+      . (not_in_tL(rho(t'), l')) -> Brk(lb, rho, sub_l(sigma, t', l')) <> Brk(lb, rho, sigma)
   +
-  sum l':Loc,t':Top .
-    unsubB(l',t') .
-    Brk(lb, rho, unsub_l(sigma, t', l'))
+  sum l':Loc,t':Top
+    . unsubB(l',t')
+      . Brk(lb, rho, unsub_l(sigma, t', l'))
   +
-  sum l':Loc,t':Top .
-    addpubt(l',t') .
-    Brk(lb, add_pub_t(rho, t', l'), sigma)
+  sum l':Loc,t':Top
+    . addpubt(l',t')
+      . Brk(lb, add_pub_t(rho, t', l'), sigma)
   +
-  sum l':Loc,t':Top .
-    removpubt(l',t') .
-    Brk(lb, remov_pub_t(rho, t', l'), sigma)
+  sum l':Loc,t':Top
+    . removpubt(l',t')
+      . Brk(lb, remov_pub_t(rho, t', l'), sigma)
 ;
 
 Prog =
-  allow( {sub, unsub, addpubt, removpubt},
+  allow( {sub, unsub, addpubt, removpubt, store},
   	comm( {subS|subB|subP -> sub, unsubS|unsubB|unsubP -> unsub},
       Sub(loc1, {}) ||
       Sub(loc4, {}) ||
