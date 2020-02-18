@@ -29,22 +29,21 @@ map
   % boot maps
   empty_LocSet: Set(Loc);
   empty_tLoc: M_tL;
-
   % adding and removing relationships of topics and publishers in the broker
   add_pub_t: M_tL # Top # Loc -> M_tL;
   remov_pub_t: M_tL # Top # Loc -> M_tL;
-
   % verifies if a Loc is NOT part of a set of Locs
   not_in_tL: Set(Loc) # Loc -> Bool;
+  store_ev_in_b: Ev # Top # Set(Loc) -> Set(t_tel);
+  notify_sub: s_TEL # Loc -> s_TEL;
+  empty_s_TEL: s_TEL;
 
-
-  fillB: Ev # Top # Set(Loc) -> Set(t_tel);
 var
   t:Top;
 	l, lb, ls:Loc;
 	t_tel': t_tel;
 	B': B;
-  tes: s_TEL;
+  s_TEL': s_TEL;
   chi: M_tL;
   L': Set(Loc);
   ev': Ev;
@@ -61,16 +60,18 @@ eqn
 
   not_in_tL(L', ls) = !(ls in L');
 
-  fillB(ev', t, L') = {b: t_tel | get_t(b) == t && get_e(b) == ev' && get_l(b) in L'};
-  %append_to_B(B', tes) = B' <| tes;
-  %teste(t,p_TxL') =  {y: p_tSubs | y in p_TxL' && get_t'(y) == t};
+  empty_s_TEL = {};
+  % creates a set of triples containing an event ev', a topic t, and all locations contained in L'
+  store_ev_in_b(ev', t, L') = {b: t_tel | get_t(b) == t && get_e(b) == ev' && get_l(b) in L'};
+
+  notify_sub(s_TEL', ls) = s_TEL' - {tels:t_tel | get_l(tels) == ls && tels in s_TEL'};
 
 act
-  a, b, c;
   sub,  subP,  subS,  subB: Loc # Top;
   unsub,unsubP,unsubS,unsubB: Loc # Top;
   addpubt,removpubt: Loc # Top;
   store: Top # Ev;
+  notify: Loc;
 
 proc
 
@@ -102,7 +103,11 @@ Pub(lp:Loc, chi: M_tL, b:B) =
   +
   sum t': Top, ev': Ev
     . store(t', ev')
-      . Pub(lp, chi, b <| fillB(ev', t', chi(t')))
+      . Pub(lp, chi, b <| store_ev_in_b(ev', t', chi(t')))
+  +
+  sum l': Loc
+  . notify(l')
+    . ((#b != 0) && (head(b) != empty_s_TEL)) -> Pub(lp, chi, [notify_sub(head(b), l')] ++ tail(b))
 ;
 
 % Broker state:
@@ -129,7 +134,7 @@ Brk(lb:Loc, rho: M_tL, sigma: M_tL) =
 ;
 
 Prog =
-  allow( {sub, unsub, addpubt, removpubt, store},
+  allow( {sub, unsub, addpubt, removpubt, store, notify},
   	comm( {subS|subB|subP -> sub, unsubS|unsubB|unsubP -> unsub},
       Sub(loc1, {}) ||
       Sub(loc4, {}) ||
