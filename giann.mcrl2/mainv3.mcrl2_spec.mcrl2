@@ -1,7 +1,7 @@
 sort
   % fixed set of locations and topics
   % locations are denoted by Loc
-  Loc = struct loc1 | loc2 | loc3 | loc4 | locbrk;
+  Loc = struct s1 | p2 | p1 | s2 | locbrk;
   % topics are denoted by Top
   Top = struct top1 | top2;
   % events used in the system
@@ -100,12 +100,14 @@ proc
 %  psi_l - subscribed topics
 Sub(ls:Loc, psi_l:Set(Top)) =
   sum t':Top
-    . subS(ls, t')
+  . !(t' in psi_l) ->
+    subS(ls, t')
       . Sub(ls, psi_l + {t'})
   +
   sum t':Top
-    . unsubS(ls, t')
-      . Sub(ls, psi_l - {t'})
+    .(t' in psi_l) ->
+      unsubS(ls, t')
+        . Sub(ls, psi_l - {t'})
 ;
 
 % Publisher state:
@@ -122,12 +124,14 @@ Pub(lp:Loc, chi: M_tL, b:B) =
       . Pub(lp, unsub_l(chi, t', ls), b)
   +
   sum t': Top, ev': Ev
-    . store(t', ev')
-      . Pub(lp, chi, b <| store_ev_in_b(ev', t', chi(t')))
+    . (chi(t') != {}) ->
+      store(t', ev')
+        . Pub(lp, chi, b <| store_ev_in_b(ev', t', chi(t')))
   +
   sum ls: Loc
-  . notify(ls)
-    . ((#b != 0) && (head(b) != empty_s_TEL)) -> Pub(lp, chi, [notify_sub(head(b), ls)] ++ tail(b))
+   . ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (notify_sub(head(b), ls) != empty_s_TEL ) ) ->
+    notify(ls)
+      . ((#b != 0) && (head(b) != empty_s_TEL)) -> Pub(lp, chi, [notify_sub(head(b), ls)] ++ tail(b))
 ;
 
 % Broker state:
@@ -143,31 +147,33 @@ Brk(lb:Loc, rho: M_tL, sigma: M_tL, z: Z) =
     . unsubB(ls,t')
       . Brk(lb, rho, unsub_l(sigma, t', ls), z <| push_Z(0, rho(t'), ls, t'))
   +
-  sum ls:Loc,t':Top
-    . addpubt(ls,t')
-      . Brk(lb, add_pub_t(rho, t', ls), sigma, z)
-  +
-  sum ls:Loc,t':Top
-    . removpubt(ls,t')
-      . Brk(lb, remov_pub_t(rho, t', ls), sigma, z)
+  %sum ls:Loc,t':Top
+  %  . addpubt(ls,t')
+  %    . Brk(lb, add_pub_t(rho, t', ls), sigma, z)
+  %+
+  %sum ls:Loc,t':Top
+  %  . removpubt(ls,t')
+  %    . Brk(lb, remov_pub_t(rho, t', ls), sigma, z)
+  %+
+  sum lp: Loc, ls: Loc, t': Top
+    . ((lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(1, lp, ls, t') in head(z)) ) ->
+       popsub(ls, t')
+        . (#z != 0) -> ( (is_it_sub(head(z)) && c_z(1, lp, ls, t') in head(z)) ->  Brk(lb, rho, sigma, [pop_Z(head(z), lp)] ++ tail(z)) )
   +
   sum lp: Loc, ls: Loc, t': Top
-    . popsub(ls, t')
-      . (#z != 0) -> ( (is_it_sub(head(z)) && c_z(1, lp, ls, t') in head(z)) ->  Brk(lb, rho, sigma, [pop_Z(head(z), lp)] ++ tail(z)) )
-  +
-  sum lp: Loc, ls: Loc, t': Top
-    . popunsub(ls, t')
-      . (#z != 0) -> ( (!(is_it_sub(head(z))) && (c_z(0, lp, ls, t') in head(z))) -> Brk(lb, rho, sigma, [pop_Z(head(z), lp)] ++ tail(z)) )
+    . ((lp in rho(t')) && !(ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (#z != 0) && (c_z(0, lp, ls, t') in head(z)) ) ->
+       popunsub(ls, t')
+        . (#z != 0) -> ( (!(is_it_sub(head(z))) && (c_z(0, lp, ls, t') in head(z))) -> Brk(lb, rho, sigma, [pop_Z(head(z), lp)] ++ tail(z)) )
 ;
 
 Prog =
   allow( {sub, unsub, addpubt, removpubt, store, notify, sync_sub, sync_unsub},
   	comm( {subS|subB -> sub, popsub|subP -> sync_sub, popunsub|unsubP -> sync_unsub, unsubS|unsubB -> unsub},
-      Sub(loc1, {}) ||
-      Sub(loc4, {}) ||
-      Pub(loc2, empty_tLoc, []) ||
-      Pub(loc3, empty_tLoc, []) ||
-      Brk(locbrk, empty_tLoc, empty_tLoc, [])
+      Sub(s1, {}) ||
+      Sub(s2, {}) ||
+      Pub(p1, empty_tLoc, []) ||
+      Pub(p2, empty_tLoc, []) ||
+      Brk(locbrk, empty_tLoc[top1 -> {p1}][top2 -> {p1,p2}], empty_tLoc, [])
   	)
   )
 ;
