@@ -86,12 +86,13 @@ eqn
   is_it_sub(head_z) = exists allt: q_allt. get_a(allt) == 1 && allt in head_z;
 
 act
-  sub,  subP,  subS,  subB: Loc # Top;
+  sub, subS,  subB: Loc # Top;
   unsub,unsubP,unsubS,unsubB: Loc # Top;
   addpubt,removpubt: Loc # Top;
   store: Top # Ev;
   notify: Loc;
-  popsub, popunsub, sync_sub, sync_unsub: Loc # Top;
+  popunsub, sync_unsub: Loc # Top;
+  subP, popsub, sync_sub: Loc # Top # Loc;
 
 proc
 
@@ -116,7 +117,7 @@ Sub(ls:Loc, psi_l:Set(Top)) =
 % b - list contaning sets of triples of (topic, event, subscriber)
 Pub(lp:Loc, chi: M_tL, b:B) =
   sum ls:Loc, t': Top
-    . subP(ls, t')
+    . subP(ls, t', lp)
       . (lp != ls) -> Pub(lp, sub_l(chi, t', ls), b)
   +
   sum ls:Loc, t': Top
@@ -141,7 +142,7 @@ Pub(lp:Loc, chi: M_tL, b:B) =
 Brk(lb:Loc, rho: M_tL, sigma: M_tL, z: Z) =
   sum ls:Loc,t':Top
     . subB(ls,t')
-      . (not_in_tL(rho(t'), ls)) -> Brk(lb, rho, sub_l(sigma, t', ls), z <| push_Z(1, rho(t'), ls, t')) %<> Brk(lb, rho, sigma, z)
+      . (not_in_tL(rho(t'), ls) ) -> Brk(lb, rho, sub_l(sigma, t', ls), z <| push_Z(1, rho(t'), ls, t')) %<> Brk(lb, rho, sigma, z)
   +
   sum ls:Loc,t':Top
     . unsubB(ls,t')
@@ -156,12 +157,12 @@ Brk(lb:Loc, rho: M_tL, sigma: M_tL, z: Z) =
   %    . Brk(lb, remov_pub_t(rho, t', ls), sigma, z)
   %+
   sum lp: Loc, ls: Loc, t': Top
-    . ((lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(1, lp, ls, t') in head(z)) ) ->
-       popsub(ls, t')
+    . ( (lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(1, lp, ls, t') in head(z))  ) ->
+       popsub(ls, t', lp)
         . (#z != 0) -> ( (is_it_sub(head(z)) && c_z(1, lp, ls, t') in head(z)) ->  Brk(lb, rho, sigma, [pop_Z(head(z), lp)] ++ tail(z)) )
   +
   sum lp: Loc, ls: Loc, t': Top
-    . ((lp in rho(t')) && !(ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (#z != 0) && (c_z(0, lp, ls, t') in head(z)) ) ->
+    . ( (lp in rho(t')) && !(ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (#z != 0) && (c_z(0, lp, ls, t') in head(z)) ) ->
        popunsub(ls, t')
         . (#z != 0) -> ( (!(is_it_sub(head(z))) && (c_z(0, lp, ls, t') in head(z))) -> Brk(lb, rho, sigma, [pop_Z(head(z), lp)] ++ tail(z)) )
 ;
