@@ -35,6 +35,7 @@ map
   not_in_tL: Set(Loc) # Loc -> Bool;
   store_ev_in_b: Ev # Top # Set(Loc) -> Set(t_tel);
   notify_sub: s_TEL # Loc -> s_TEL;
+  sSet_ls_in_b: s_TEL # Loc -> s_TEL;
   push_Z: Nat # Set(Loc) # Loc # Top -> s_ALLT;
   pop_Z: s_ALLT # Loc -> s_ALLT;
   is_it_sub: s_ALLT -> Bool;
@@ -74,6 +75,8 @@ eqn
 
   % pops an element of the publisher's buffer (sends an event to a given subscriber)
   notify_sub(s_TEL', ls) = s_TEL' - {tels:t_tel | get_l(tels) == ls && tels in s_TEL'};
+
+  sSet_ls_in_b(s_TEL', ls) = {tels:t_tel | get_l(tels) == ls && tels in s_TEL'};
 
   % adds a set containing the action (sub/unsub), the set of locations of all publishers that need to be updated
   % and the pair of subscriber and topic
@@ -130,7 +133,7 @@ Pub(lp:Loc, chi: M_tL, b:B) =
         . Pub(lp, chi, b <| store_ev_in_b(ev', t', chi(t')))
   +
   sum ls: Loc
-   . ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (notify_sub(head(b), ls) != empty_s_TEL ) ) ->
+   . ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (empty_s_TEL != sSet_ls_in_b(head(b), ls)) ) ->
     notify(ls)
       . ((#b != 0) && (head(b) != empty_s_TEL)) -> Pub(lp, chi, [notify_sub(head(b), ls)] ++ tail(b))
 ;
