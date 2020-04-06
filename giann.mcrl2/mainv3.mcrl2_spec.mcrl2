@@ -96,11 +96,11 @@ eqn
 
 act
   sub, subS,  subB: Loc # Top;
-  unsub,unsubP,unsubS,unsubB: Loc # Top;
+  unsub,unsubS,unsubB: Loc # Top;
   addpubt,removpubt: Loc # Top;
   store: Top # Ev;
   notify: Loc;
-  popunsub, sync_unsub: Loc # Top;
+  unsubP, popunsub, sync_unsub: Loc # Top # Loc;
   subP, popsub, sync_sub: Loc # Top # Loc;
 
 proc
@@ -130,7 +130,7 @@ Pub(lp:Loc, chi: M_tL, b:B) =
       . (lp != ls) -> Pub(lp, sub_l(chi, t', ls), b)
   +
   sum ls:Loc, t': Top
-    . (lp != ls) -> unsubP(ls, t')
+    . (lp != ls) -> unsubP(ls, t', lp)
       . Pub(lp, unsub_l(chi, t', ls), b)
   +
   sum t': Top, ev': Ev
@@ -166,9 +166,9 @@ Brk(lb:Loc, rho: M_tL, sigma: M_tL, z: Z) =
   +
   sum lp: Loc, ls: Loc, t': Top
     . ( (z != []) && (#z != 0) && (lp in rho(t')) && !(ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(0, lp, ls, t') in head(z)) && !(is_it_sub(head(z))) && (pop_Z(head(z), lp) != empty_s_ALLT) )
-      -> popunsub(ls, t') . Brk(lb, rho, sigma, [pop_Z(head(z), lp)] ++ tail(z))
+      -> popunsub(ls, t', lp) . Brk(lb, rho, sigma, [pop_Z(head(z), lp)] ++ tail(z))
       <> ( ( (z != []) && (#z != 0) && (lp in rho(t')) && !(ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(0, lp, ls, t') in head(z)) && !(is_it_sub(head(z))) && (pop_Z(head(z), lp) == empty_s_ALLT) )
-         -> popunsub(ls, t') . Brk(lb, rho, sigma, tail(z)) )
+         -> popunsub(ls, t', lp) . Brk(lb, rho, sigma, tail(z)) )
 ;
 
 Prog =
