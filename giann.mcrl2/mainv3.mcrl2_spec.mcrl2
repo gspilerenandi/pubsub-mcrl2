@@ -41,6 +41,7 @@ map
   notify_sub: s_TEL # Loc -> s_TEL;
   sSet_ls_in_b: s_TEL # Loc -> s_TEL;
   push_Z: Nat # Set(Loc) # Loc # Top -> s_ALLT;
+  pendingsubs: s_ALLT # Set(Loc) # Loc # Top -> Bool;
   pop_Z: s_ALLT # Loc -> s_ALLT;
   is_it_sub: s_ALLT -> Bool;
 
@@ -94,6 +95,8 @@ eqn
   % verifies if it is a sub
   is_it_sub(head_z) = exists allt: q_allt. get_a(allt) == 1 && allt in head_z;
 
+  pendingsubs(head_z, L', ls, t) = exists allt: q_allt. get_lp(allt) in L' && allt in head_z && get_a(allt) == 1 && get_t(allt) == t && get_ls(allt) == ls;
+
 act
   sub, subS,  subB: Loc # Top;
   unsub,unsubS,unsubB: Loc # Top;
@@ -139,9 +142,10 @@ Pub(lp:Loc, chi: M_tL, b:B) =
         . Pub(lp, chi, b <| store_ev_in_b(ev', t', chi(t')))
   +
   sum ls: Loc
-   . ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (empty_s_TEL != sSet_ls_in_b(head(b), ls)) ) ->
-    notify(ls)
-      . ((#b != 0) && (head(b) != empty_s_TEL)) -> Pub(lp, chi, [notify_sub(head(b), ls)] ++ tail(b))
+    . ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (empty_s_TEL != sSet_ls_in_b(head(b), ls)) )
+      -> notify(ls)
+        . ((#b != 0) && (head(b) != empty_s_TEL))
+          -> Pub(lp, chi, [notify_sub(head(b), ls)] ++ tail(b))
 ;
 
 % Broker state:
@@ -155,8 +159,8 @@ Brk(lb:Loc, rho: M_tL, sigma: M_tL, z: Z) =
         -> Brk(lb, rho, sub_l(sigma, t', ls), z <| push_Z(1, rho(t'), ls, t')) %<> Brk(lb, rho, sigma, z)
   +
   sum ls:Loc,t':Top
-    . unsubB(ls,t')
-      . Brk(lb, rho, unsub_l(sigma, t', ls), z <| push_Z(0, rho(t'), ls, t') )
+    . ( (ls in sigma(t')) && ((z == []) || ((z != []) && (#z != 0) && !(pendingsubs(head(z), rho(t'), ls, t')))) )
+       -> unsubB(ls,t') . Brk(lb, rho, unsub_l(sigma, t', ls), z <| push_Z(0, rho(t'), ls, t') )
   +
   sum lp: Loc, ls: Loc, t': Top
     . ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (c_z(1, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) != empty_s_ALLT) )
