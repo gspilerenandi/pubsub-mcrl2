@@ -19,7 +19,7 @@ sort
 
   % broker's buffer
   % get_a: 0 = unsub, 1 = sub
-  q_allt = struct c_z(get_a: Nat, get_lp: Loc, get_ls: Loc, get_t: Top);
+  q_allt = struct c_z(get_a: Nat, 	get_lp: Loc, get_ls: Loc, get_t: Top);
   s_ALLT = Set(q_allt);
 
   Z = List(s_ALLT);
@@ -41,7 +41,8 @@ map
   notify_sub: s_TEL # Loc -> s_TEL;
   sSet_ls_in_b: s_TEL # Loc -> s_TEL;
   push_Z: Nat # Set(Loc) # Loc # Top -> s_ALLT;
-  pendingsubs: s_ALLT # Set(Loc) # Loc # Top -> Bool;
+  pendingsubs_at_head: s_ALLT # Set(Loc) # Loc # Top -> Bool;
+  sub_in_list: Z # Set(Loc) # Loc # Top -> Bool;
   pop_Z: s_ALLT # Loc -> s_ALLT;
   is_it_sub: s_ALLT -> Bool;
 
@@ -56,6 +57,7 @@ var
   ev': Ev;
   action: Nat;
   head_z: s_ALLT;
+  z': Z;
 
 eqn
 
@@ -95,7 +97,11 @@ eqn
   % verifies if it is a sub
   is_it_sub(head_z) = exists allt: q_allt. get_a(allt) == 1 && allt in head_z;
 
-  pendingsubs(head_z, L', ls, t) = exists allt: q_allt. get_lp(allt) in L' && allt in head_z && get_a(allt) == 1 && get_t(allt) == t && get_ls(allt) == ls;
+  % checks if the set head_z contains an element containing the parameters provided
+  pendingsubs_at_head(head_z, L', ls, t) = exists allt: q_allt. get_lp(allt) in L' && allt in head_z && get_a(allt) == 1 && get_t(allt) == t && get_ls(allt) == ls;
+
+  % searches the entire z' list looking for a matching element with the parameters provided
+  sub_in_list(z', L', ls, t) = if( (z' != []) && !pendingsubs_at_head(head(z'), L', ls, t) && (tail(z') != []), sub_in_list(tail(z'), L', ls, t), pendingsubs_at_head(head(z'), L', ls, t));
 
 act
   sub, subS,  subB: Loc # Top;
@@ -124,9 +130,9 @@ Sub(ls:Loc, psi_l:Set(Top)) =
 ;
 
 % Publisher state:
-% lp - publisher's location
-% p_tl - pair that represents topics and subscribers (topic, L)
-% b - list contaning sets of triples of (topic, event, subscriber)
+%   lp - publisher's location
+%   chi - topic referencing the subscribers associated to it
+%   b - list contaning sets of triples of (topic, event, subscriber)
 Pub(lp:Loc, chi: M_tL, b:B) =
   sum ls:Loc, t': Top
     . subP(ls, t', lp)
@@ -142,33 +148,43 @@ Pub(lp:Loc, chi: M_tL, b:B) =
         . Pub(lp, chi, b <| store_ev_in_b(ev', t', chi(t')))
   +
   sum ls: Loc
-    . ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (empty_s_TEL != sSet_ls_in_b(head(b), ls)) )
-      -> notify(ls)
-        . ((#b != 0) && (head(b) != empty_s_TEL))
-          -> Pub(lp, chi, [notify_sub(head(b), ls)] ++ tail(b))
+    . ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (empty_s_TEL != sSet_ls_in_b(head(b), ls)) && (head(b) != empty_s_TEL) && (notify_sub(head(b), ls) != empty_s_TEL) )
+      -> notify(ls) . Pub(lp, chi, [notify_sub(head(b), ls)] ++ tail(b))
+      <> ( ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (empty_s_TEL != sSet_ls_in_b(head(b), ls)) && (head(b) != empty_s_TEL) && (notify_sub(head(b), ls) == empty_s_TEL) )
+          -> notify(ls) . Pub(lp, chi, tail(b)))
 ;
 
 % Broker state:
-%   l - location
-%   pubs: publishers  (locs) and their topics
-%   subs: subscribers (locs) and their topics
+%   lb - location of the broker
+%   rho: publishers  (locs) and their topics
+%   sigma: subscribers (locs) and their topics
+%   z: the buffer containing sync updates that need to be sent to the publishers regarding new subs or unsubs
 Brk(lb:Loc, rho: M_tL, sigma: M_tL, z: Z) =
   sum ls:Loc,t':Top
     . subB(ls,t')
       . (not_in_tL(rho(t'), ls) )
-        -> Brk(lb, rho, sub_l(sigma, t', ls), z <| push_Z(1, rho(t'), ls, t')) %<> Brk(lb, rho, sigma, z)
+        -> Brk(lb, rho, sub_l(sigma, t', ls), z <| push_Z(1, rho(t'), ls, t'))
   +
   sum ls:Loc,t':Top
-    . ( (ls in sigma(t')) && ((z == []) || ((z != []) && (#z != 0) && !(pendingsubs(head(z), rho(t'), ls, t')))) )
+    % problematic code here: uncomment to the line bellow to avoid the recursive function
+    %. ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && (#z != 0) && !(pendingsubs_at_head(head(z), rho(t'), ls, t')) ) ) )
+    % if the line above is uncommented, please comment the line below. Do the opposite in the contrary case
+    . ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && (#z != 0) && !(sub_in_list(z, rho(t'), ls, t')) ) ) )
        -> unsubB(ls,t') . Brk(lb, rho, unsub_l(sigma, t', ls), z <| push_Z(0, rho(t'), ls, t') )
   +
   sum lp: Loc, ls: Loc, t': Top
+    % a bunch of checks used to ignore unwanted actions in the simulator. it is possible that some of these checks are redundant
+    % the first conditional choice covers the case where the head of the z list is not an empty set yet
+    % the second conditional choice covers the case where the head of the z list is an empty set
     . ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (c_z(1, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) != empty_s_ALLT) )
       -> popsub(ls, t', lp) . Brk(lb, rho, sigma,  [pop_Z(head(z), lp)] ++ tail(z))
       <> ( ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (c_z(1, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) == empty_s_ALLT) )
         -> popsub(ls, t', lp).Brk(lb, rho, sigma,  tail(z)) )
   +
   sum lp: Loc, ls: Loc, t': Top
+    % a bunch of checks used to ignore unwanted actions in the simulator. it is possible that some of these checks are redundant
+    % the first conditional choice covers the case where the head of the z list is not an empty set yet
+    % the second conditional choice covers the case where the head of the z list is an empty set
     . ( (z != []) && (#z != 0) && (lp in rho(t')) && !(ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(0, lp, ls, t') in head(z)) && !(is_it_sub(head(z))) && (pop_Z(head(z), lp) != empty_s_ALLT) )
       -> popunsub(ls, t', lp) . Brk(lb, rho, sigma, [pop_Z(head(z), lp)] ++ tail(z))
       <> ( ( (z != []) && (#z != 0) && (lp in rho(t')) && !(ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(0, lp, ls, t') in head(z)) && !(is_it_sub(head(z))) && (pop_Z(head(z), lp) == empty_s_ALLT) )
