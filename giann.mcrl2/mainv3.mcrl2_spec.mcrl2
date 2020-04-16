@@ -8,6 +8,10 @@ sort
   % events used in the system
   Ev = struct ev1 | ev2;
 
+  Action = struct sub | unsub;
+
+  SEvs = Set(Ev);
+
   % mapping from a topic to a set of locations
   M_tL = Top -> Set(Loc); % ~~ Top x Loc
 
@@ -19,7 +23,7 @@ sort
 
   % broker's buffer
   % get_a: 0 = unsub, 1 = sub
-  q_allt = struct c_z(get_a: Nat, 	get_lp: Loc, get_ls: Loc, get_t: Top);
+  q_allt = struct c_z(get_a: Action, 	get_lp: Loc, get_ls: Loc, get_t: Top);
   s_ALLT = Set(q_allt);
 
   Z = List(s_ALLT);
@@ -40,7 +44,7 @@ map
   store_ev_in_b: Ev # Top # Set(Loc) -> Set(t_tel);
   notify_sub: s_TEL # Loc -> s_TEL;
   sSet_ls_in_b: s_TEL # Loc -> s_TEL;
-  push_Z: Nat # Set(Loc) # Loc # Top -> s_ALLT;
+  push_Z: Action # Set(Loc) # Loc # Top -> s_ALLT;
   pendingsubs_at_head: s_ALLT # Set(Loc) # Loc # Top -> Bool;
   sub_in_list: Z # Set(Loc) # Loc # Top -> Bool;
   pop_Z: s_ALLT # Loc -> s_ALLT;
@@ -55,9 +59,10 @@ var
   chi: M_tL;
   L': Set(Loc);
   ev': Ev;
-  action: Nat;
+  action: Action;
   head_z: s_ALLT;
   z': Z;
+  SEvs': SEvs;
 
 eqn
 
@@ -95,13 +100,19 @@ eqn
   pop_Z(head_z, lp) = head_z - {allt: q_allt | get_lp(allt) == lp && allt in head_z};
 
   % verifies if it is a sub
-  is_it_sub(head_z) = exists allt: q_allt. get_a(allt) == 1 && allt in head_z;
+  is_it_sub(head_z) = exists allt: q_allt. get_a(allt) == sub && allt in head_z;
 
   % checks if the set head_z contains an element containing the parameters provided
-  pendingsubs_at_head(head_z, L', ls, t) = exists allt: q_allt. get_lp(allt) in L' && allt in head_z && get_a(allt) == 1 && get_t(allt) == t && get_ls(allt) == ls;
+  pendingsubs_at_head(head_z, L', ls, t) = exists allt: q_allt. get_lp(allt) in L' && allt in head_z && get_a(allt) == sub && get_t(allt) == t && get_ls(allt) == ls;
 
   % searches the entire z' list looking for a matching element with the parameters provided
   sub_in_list(z', L', ls, t) = if( (z' != []) && !pendingsubs_at_head(head(z'), L', ls, t) && (tail(z') != []), sub_in_list(tail(z'), L', ls, t), pendingsubs_at_head(head(z'), L', ls, t));
+
+  %sub_in_list(z', L', ls, t) =
+  %if( z' == []
+  %  , false
+  %  , pendingsubs_at_head(head(z'), L', ls, t) || sub_in_list(tail(z'), L', ls, t)
+  %  );
 
 act
   sub, subS,  subB: Loc # Top;
@@ -111,6 +122,9 @@ act
   notify: Loc;
   unsubP, popunsub, sync_unsub: Loc # Top # Loc;
   subP, popsub, sync_sub: Loc # Top # Loc;
+  popev: Ev;
+
+glob evs: Set(Ev);
 
 proc
 
@@ -133,25 +147,25 @@ Sub(ls:Loc, psi_l:Set(Top)) =
 %   lp - publisher's location
 %   chi - topic referencing the subscribers associated to it
 %   b - list contaning sets of triples of (topic, event, subscriber)
-Pub(lp:Loc, chi: M_tL, b:B) =
+Pub(lp:Loc, chi: M_tL, b:B, sevs: SEvs) =
   sum ls:Loc, t': Top
     . subP(ls, t', lp)
-      . (lp != ls) -> Pub(lp, sub_l(chi, t', ls), b)
+      . (lp != ls) -> Pub(lp, sub_l(chi, t', ls), b, sevs)
   +
   sum ls:Loc, t': Top
     . (lp != ls) -> unsubP(ls, t', lp)
-      . Pub(lp, unsub_l(chi, t', ls), b)
+      . Pub(lp, unsub_l(chi, t', ls), b, sevs)
   +
   sum t': Top, ev': Ev
-    . (chi(t') != {}) ->
+    . ((chi(t') != {}) && (ev' in sevs)) ->
       store(t', ev')
-        . Pub(lp, chi, b <| store_ev_in_b(ev', t', chi(t')))
+        . Pub(lp, chi, b <| store_ev_in_b(ev', t', chi(t')), sevs - {ev'})
   +
   sum ls: Loc
     . ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (empty_s_TEL != sSet_ls_in_b(head(b), ls)) && (head(b) != empty_s_TEL) && (notify_sub(head(b), ls) != empty_s_TEL) )
-      -> notify(ls) . Pub(lp, chi, [notify_sub(head(b), ls)] ++ tail(b))
+      -> notify(ls) . Pub(lp, chi, [notify_sub(head(b), ls)] ++ tail(b), sevs)
       <> ( ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (empty_s_TEL != sSet_ls_in_b(head(b), ls)) && (head(b) != empty_s_TEL) && (notify_sub(head(b), ls) == empty_s_TEL) )
-          -> notify(ls) . Pub(lp, chi, tail(b)))
+          -> notify(ls) . Pub(lp, chi, tail(b), sevs))
 ;
 
 % Broker state:
@@ -163,31 +177,31 @@ Brk(lb:Loc, rho: M_tL, sigma: M_tL, z: Z) =
   sum ls:Loc,t':Top
     . subB(ls,t')
       . (not_in_tL(rho(t'), ls) )
-        -> Brk(lb, rho, sub_l(sigma, t', ls), z <| push_Z(1, rho(t'), ls, t'))
+        -> Brk(lb, rho, sub_l(sigma, t', ls), z <| push_Z(sub, rho(t'), ls, t'))
   +
   sum ls:Loc,t':Top
     % problematic code here: uncomment to the line bellow to avoid the recursive function
     %. ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && (#z != 0) && !(pendingsubs_at_head(head(z), rho(t'), ls, t')) ) ) )
     % if the line above is uncommented, please comment the line below. Do the opposite in the contrary case
-    . ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && (#z != 0) && !(sub_in_list(z, rho(t'), ls, t')) ) ) )
-       -> unsubB(ls,t') . Brk(lb, rho, unsub_l(sigma, t', ls), z <| push_Z(0, rho(t'), ls, t') )
+     . ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && (#z != 0) && !(sub_in_list(z, rho(t'), ls, t')) ) ) )
+       -> unsubB(ls,t') . Brk(lb, rho, unsub_l(sigma, t', ls), z <| push_Z(unsub, rho(t'), ls, t') )
   +
   sum lp: Loc, ls: Loc, t': Top
     % a bunch of checks used to ignore unwanted actions in the simulator. it is possible that some of these checks are redundant
     % the first conditional choice covers the case where the head of the z list is not an empty set yet
     % the second conditional choice covers the case where the head of the z list is an empty set
-    . ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (c_z(1, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) != empty_s_ALLT) )
+    . ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (c_z(sub, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) != empty_s_ALLT) )
       -> popsub(ls, t', lp) . Brk(lb, rho, sigma,  [pop_Z(head(z), lp)] ++ tail(z))
-      <> ( ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (c_z(1, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) == empty_s_ALLT) )
+      <> ( ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (c_z(sub, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) == empty_s_ALLT) )
         -> popsub(ls, t', lp).Brk(lb, rho, sigma,  tail(z)) )
   +
   sum lp: Loc, ls: Loc, t': Top
     % a bunch of checks used to ignore unwanted actions in the simulator. it is possible that some of these checks are redundant
     % the first conditional choice covers the case where the head of the z list is not an empty set yet
     % the second conditional choice covers the case where the head of the z list is an empty set
-    . ( (z != []) && (#z != 0) && (lp in rho(t')) && !(ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(0, lp, ls, t') in head(z)) && !(is_it_sub(head(z))) && (pop_Z(head(z), lp) != empty_s_ALLT) )
+    . ( (z != []) && (#z != 0) && (lp in rho(t')) && !(ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(unsub, lp, ls, t') in head(z)) && !(is_it_sub(head(z))) && (pop_Z(head(z), lp) != empty_s_ALLT) )
       -> popunsub(ls, t', lp) . Brk(lb, rho, sigma, [pop_Z(head(z), lp)] ++ tail(z))
-      <> ( ( (z != []) && (#z != 0) && (lp in rho(t')) && !(ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(0, lp, ls, t') in head(z)) && !(is_it_sub(head(z))) && (pop_Z(head(z), lp) == empty_s_ALLT) )
+      <> ( ( (z != []) && (#z != 0) && (lp in rho(t')) && !(ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(unsub, lp, ls, t') in head(z)) && !(is_it_sub(head(z))) && (pop_Z(head(z), lp) == empty_s_ALLT) )
          -> popunsub(ls, t', lp) . Brk(lb, rho, sigma, tail(z)) )
 ;
 
@@ -196,8 +210,8 @@ Prog =
   	comm( {subS|subB -> sub, popsub|subP -> sync_sub, popunsub|unsubP -> sync_unsub, unsubS|unsubB -> unsub},
       Sub(s1, {}) ||
       Sub(s2, {}) ||
-      Pub(p1, empty_tLoc, []) ||
-      Pub(p2, empty_tLoc, []) ||
+      Pub(p1, empty_tLoc, [], {ev1,ev2}) ||
+      Pub(p2, empty_tLoc, [], {ev1,ev2}) ||
       Brk(locbrk, empty_tLoc[top1 -> {p1}][top2 -> {p1,p2}], empty_tLoc, [])
   	)
   )
