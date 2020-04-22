@@ -45,8 +45,17 @@ map
   notify_sub: s_TEL # Loc -> s_TEL;
   sSet_ls_in_b: s_TEL # Loc -> s_TEL;
   push_Z: Action # Set(Loc) # Loc # Top -> s_ALLT;
+
   pendingsubs_at_head: s_ALLT # Set(Loc) # Loc # Top -> Bool;
+
   sub_in_list: Z # Set(Loc) # Loc # Top -> Bool;
+
+  tailvazia: Z -> Bool;
+  tailvazia2: Z -> Z;
+
+  sub_in_list2: Z # Set(Loc) # Loc # Top # Int -> Bool;
+  sub_in_list3: Z # Set(Loc) # Loc # Top # Int -> Bool;
+
   pop_Z: s_ALLT # Loc -> s_ALLT;
   is_it_sub: s_ALLT -> Bool;
 
@@ -63,7 +72,7 @@ var
   head_z: s_ALLT;
   z': Z;
   SEvs': SEvs;
-
+  n: Int;
 eqn
 
   sub_l(chi, t, ls) = chi[t -> chi(t) + {ls}];
@@ -94,7 +103,11 @@ eqn
 
   % adds a set containing the action (sub/unsub), the set of locations of all publishers that need to be updated
   % and the pair of subscriber and topic
-  push_Z(action, L', ls, t) = {allt: q_allt | get_a(allt) == action && get_ls(allt) == ls && get_t(allt) == t &&  get_lp(allt) in L'};
+  push_Z(action, L', ls, t) = {allt: q_allt | get_a(allt) == action
+                                              && get_ls(allt) == ls
+                                              && get_t(allt) == t
+                                              &&  get_lp(allt) in L'
+                              };
 
   % pops an element of the broker's buffer (sends the action to a given publisher)
   pop_Z(head_z, lp) = head_z - {allt: q_allt | get_lp(allt) == lp && allt in head_z};
@@ -103,16 +116,65 @@ eqn
   is_it_sub(head_z) = exists allt: q_allt. get_a(allt) == sub && allt in head_z;
 
   % checks if the set head_z contains an element containing the parameters provided
-  pendingsubs_at_head(head_z, L', ls, t) = exists allt: q_allt. get_lp(allt) in L' && allt in head_z && get_a(allt) == sub && get_t(allt) == t && get_ls(allt) == ls;
+  pendingsubs_at_head(head_z, L', ls, t) = exists allt: q_allt. get_lp(allt) in L'
+                                                                && allt in head_z
+                                                                && get_a(allt) == sub
+                                                                && get_t(allt) == t
+                                                                && get_ls(allt) == ls;
 
   % searches the entire z' list looking for a matching element with the parameters provided
-  sub_in_list(z', L', ls, t) = if( (z' != []) && !pendingsubs_at_head(head(z'), L', ls, t) && (tail(z') != []), sub_in_list(tail(z'), L', ls, t), pendingsubs_at_head(head(z'), L', ls, t));
+  %% it first verifies if accessing the list and the set of publishers would not cause any problem
+  %% the second if is used to verify if the element being verified is the last element in the list
+  %% or if the element itself contains what we are looking for
 
-  %sub_in_list(z', L', ls, t) =
-  %if( z' == []
-  %  , false
-  %  , pendingsubs_at_head(head(z'), L', ls, t) || sub_in_list(tail(z'), L', ls, t)
-  %  );
+  % I built the equation without using any of the operations that are listed in the documentation as computationally expensive:
+  %% https://www.mcrl2.org/web/user_manual/language_reference/data.html#lists
+  sub_in_list(z', L', ls, t) = if( z' == [] || L' == {}
+                                  , false
+                                  , if( (tail(z') != [] && !pendingsubs_at_head(head(z'), L', ls, t))
+                                        , sub_in_list(tail(z'), L', ls, t)
+                                        , pendingsubs_at_head(head(z'), L', ls, t)
+                                  )
+                               );
+
+  %####################### BEGINNING OF EXPERIMENTING SECTION #######################
+
+  % the two equations below are used to verify the outputs using the Temp process
+  tailvazia(z') = if (tail(z') == []
+                      , true
+                      , false
+                      );
+
+  tailvazia2(z') = tail(z');
+
+  % variations of the sub_in_list equations
+  % I was trying to use a fixed number n of iteractions to check if the tool would finally be able to compile
+  % n would be an arbitrary value passed as a parameter. I managed to make it compile at some point, however
+  %% the simulation would crash during the testing. this is probably due to trying to access non existing positions in the list
+  %% I will try to get back to it again if dont manage to make it work in any other way
+  sub_in_list2(z', L', ls, t, n) = if ( n >= 1 && !pendingsubs_at_head(head(z'), L', ls, t)
+                                      , if (n == 1
+                                            , sub_in_list2([], L', ls, t, 0)
+                                            , sub_in_list2(tail(z'), L', ls, t, n-1)
+                                        )
+                                      , if ((z' == [])
+                                          , false
+                                          , pendingsubs_at_head(head(z'), L', ls, t)
+                                        )
+                                  );
+  %sub_in_list3(z', L', ls, t, n) = if( z'.n == {} && n >= 0
+  %                                    , sub_in_list3(z', L', ls, t, n-1)
+  %                                    , if( n >= 2  && !pendingsubs_at_head(head(z'), L', ls, t)
+  %                                        , sub_in_list3(z', L', ls, t, n-1)
+  %                                        , pendingsubs_at_head(head(z'), L', ls, t)
+  %                                        )
+  %                                    );
+  sub_in_list3(z', L', ls, t, n) = if( n < 6 && ((tail(z') != [] && !pendingsubs_at_head(head(z'), L', ls, t)) || (z' != [] && pendingsubs_at_head(head(z'), L', ls, t)))
+                                  , pendingsubs_at_head(head(z'), L', ls, t)
+                                  , sub_in_list3(tail(z'), L', ls, t, n+1)
+                               );
+
+  %####################### END OF EXPERIMENTING SECTION #######################
 
 act
   sub, subS,  subB: Loc # Top;
@@ -123,7 +185,7 @@ act
   unsubP, popunsub, sync_unsub: Loc # Top # Loc;
   subP, popsub, sync_sub: Loc # Top # Loc;
   popev: Ev;
-
+  a:Bool;
 glob evs: Set(Ev);
 
 proc
@@ -181,9 +243,9 @@ Brk(lb:Loc, rho: M_tL, sigma: M_tL, z: Z) =
   +
   sum ls:Loc,t':Top
     % problematic code here: uncomment to the line bellow to avoid the recursive function
-    %. ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && (#z != 0) && !(pendingsubs_at_head(head(z), rho(t'), ls, t')) ) ) )
-    % if the line above is uncommented, please comment the line below. Do the opposite in the contrary case
-     . ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && (#z != 0) && !(sub_in_list(z, rho(t'), ls, t')) ) ) )
+    %. ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && !(pendingsubs_at_head(head(z), rho(t'), ls, t')) ) ) )
+    % if the line above is uncommented, please comment the line below. Do the contrary in the oposite case
+     . ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && (rho(t') != {}) && (ls != lb) && !(ls in rho(t')) && !(sub_in_list(z, rho(t'), ls, t')) ) ) )
        -> unsubB(ls,t') . Brk(lb, rho, unsub_l(sigma, t', ls), z <| push_Z(unsub, rho(t'), ls, t') )
   +
   sum lp: Loc, ls: Loc, t': Top
@@ -205,6 +267,8 @@ Brk(lb:Loc, rho: M_tL, sigma: M_tL, z: Z) =
          -> popunsub(ls, t', lp) . Brk(lb, rho, sigma, tail(z)) )
 ;
 
+Tmp(b:Bool) = a(b) . Tmp(b);
+
 Prog =
   allow( {sub, unsub, addpubt, removpubt, store, notify, sync_sub, sync_unsub},
   	comm( {subS|subB -> sub, popsub|subP -> sync_sub, popunsub|unsubP -> sync_unsub, unsubS|unsubB -> unsub},
@@ -220,3 +284,5 @@ Prog =
 %%%%%%%
 init
   Prog;
+  %Tmp(sub_in_list([{c_z(sub, p1, s1, top1)}], {}, s1, top1) );
+  %Tmp(pendingsubs_at_head( {c_z(sub, p1, s1, top1)}, {p1,p2}, s1, top1) );
