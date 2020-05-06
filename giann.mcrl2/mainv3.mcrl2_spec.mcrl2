@@ -1,4 +1,4 @@
-sort
+ sort
 
   % fixed set of locations and topics
   % locations are denoted by Loc
@@ -123,13 +123,16 @@ eqn
                                                                 && get_ls(allt) == ls;
 
   % searches the entire z' list looking for a matching element with the parameters provided
+  %% why is it necessary to search the entire buffer?
+  %%% at the moment,
+
   %% it first verifies if accessing the list and the set of publishers would not cause any problem
   %% the second if is used to verify if the element being verified is the last element in the list
   %% or if the element itself contains what we are looking for
 
   % I built the equation without using any of the operations that are listed in the documentation as computationally expensive:
   %% https://www.mcrl2.org/web/user_manual/language_reference/data.html#lists
-  sub_in_list(z', L', ls, t) = if( z' == [] || L' == {}
+  sub_in_list(z', L', ls, t) = if( (ls != locbrk && !(ls in L')) && (z' == [] || L' == {})
                                   , false
                                   , if( (tail(z') != [] && !pendingsubs_at_head(head(z'), L', ls, t))
                                         , sub_in_list(tail(z'), L', ls, t)
@@ -243,18 +246,18 @@ Brk(lb:Loc, rho: M_tL, sigma: M_tL, z: Z) =
   +
   sum ls:Loc,t':Top
     % problematic code here: uncomment to the line bellow to avoid the recursive function
-    %. ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && !(pendingsubs_at_head(head(z), rho(t'), ls, t')) ) ) )
+     . ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && !(pendingsubs_at_head(head(z), rho(t'), ls, t')) ) ) )
     % if the line above is uncommented, please comment the line below. Do the contrary in the oposite case
-     . ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && (rho(t') != {}) && (ls != lb) && !(ls in rho(t')) && !(sub_in_list(z, rho(t'), ls, t')) ) ) )
+    % . ( (ls in sigma(t')) && ( (z == []) || ( (z != []) && (rho(t') != {}) && (ls != lb) && !(ls in rho(t')) && !(sub_in_list(z, rho(t'), ls, t')) ) ) )
        -> unsubB(ls,t') . Brk(lb, rho, unsub_l(sigma, t', ls), z <| push_Z(unsub, rho(t'), ls, t') )
   +
   sum lp: Loc, ls: Loc, t': Top
     % a bunch of checks used to ignore unwanted actions in the simulator. it is possible that some of these checks are redundant
     % the first conditional choice covers the case where the head of the z list is not an empty set yet
     % the second conditional choice covers the case where the head of the z list is an empty set
-    . ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (c_z(sub, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) != empty_s_ALLT) )
+    . ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (ls in sigma(t')) &&  (lp != locbrk) && (ls != locbrk) && (c_z(sub, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) != empty_s_ALLT) )
       -> popsub(ls, t', lp) . Brk(lb, rho, sigma,  [pop_Z(head(z), lp)] ++ tail(z))
-      <> ( ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (ls in sigma(t')) && (lp != locbrk) && (ls != locbrk) && (c_z(sub, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) == empty_s_ALLT) )
+      <> ( ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (lp != locbrk) && (ls != locbrk) && (c_z(sub, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) == empty_s_ALLT) )
         -> popsub(ls, t', lp).Brk(lb, rho, sigma,  tail(z)) )
   +
   sum lp: Loc, ls: Loc, t': Top
