@@ -1,0 +1,251 @@
+sort
+
+ % fixed set of locations and topics
+ % locations are denoted by Loc
+ Loc = struct s1 | s2 | p2 | locbrk;
+ % topics are denoted by Top
+ Top = struct top1 | top2;
+ % events used in the system
+ Ev = struct ev2;
+
+ Action = struct sub | unsub;
+
+ SEvs = Set(Ev);
+
+ % mapping from a topic to a set of locations
+ M_tL = Top -> Set(Loc); % ~~ Top x Loc
+
+ % (topic,event,location)
+ % publisher's buffer
+ t_tel = struct c_tel(get_t: Top, get_e: Ev, get_l: Loc);
+ s_TEL = Set(t_tel);
+ B = List(s_TEL);
+
+ % broker's buffer
+ % get_a: 0 = unsub, 1 = sub
+ q_allt = struct c_z(get_a: Action, 	get_lp: Loc, get_ls: Loc, get_t: Top);
+ s_ALLT = Set(q_allt);
+
+ Z = List(s_ALLT);
+
+% Auxiliary functions
+map
+ sub_l: M_tL # Top # Loc -> M_tL;
+ unsub_l: M_tL # Top # Loc -> M_tL;
+
+ empty_LocSet: Set(Loc);
+ empty_tLoc: M_tL;
+ empty_s_TEL: s_TEL;
+ empty_s_ALLT: s_ALLT;
+ empty_z_List: Z;
+
+ add_pub_t: M_tL # Top # Loc -> M_tL;
+ remov_pub_t: M_tL # Top # Loc -> M_tL;
+
+ not_in_tL: Set(Loc) # Loc -> Bool;
+
+ store_ev_in_b: Ev # Top # Set(Loc) -> Set(t_tel);
+ notify_sub: s_TEL # Loc -> s_TEL;
+
+ sSet_ls_in_b: s_TEL # Loc -> s_TEL;
+ push_Z: Action # Set(Loc) # Loc # Top -> s_ALLT;
+
+ pendingsubs_at_head: s_ALLT # Set(Loc) # Loc # Top -> Bool;
+ pendingunsubs_at_head: s_ALLT # Set(Loc) # Loc # Top -> Bool;
+
+ sub_in_list: Z # Set(Loc) # Loc # Top -> Bool;
+ unsub_in_list: Z # Set(Loc) # Loc # Top -> Bool;
+
+ pop_Z: s_ALLT # Loc -> s_ALLT;
+ is_it_sub: s_ALLT -> Bool;
+
+var
+ t:Top;
+ l, lb, ls, lp:Loc;
+ t_tel': t_tel;
+ B': B;
+ s_TEL': s_TEL;
+ chi: M_tL;
+ L': Set(Loc);
+ ev': Ev;
+ action: Action;
+ head_z: s_ALLT;
+ z': Z;
+ SEvs': SEvs;
+ n: Int;
+
+eqn
+
+ sub_l(chi, t, ls) = chi[t -> chi(t) + {ls}];
+ unsub_l(chi, t, ls) = chi[t -> chi(t) - {ls}];
+
+ % adding and removing relationships of topics and publishers in the broker
+ add_pub_t(chi, t, ls) = chi[t -> chi(t) + {ls}];
+ remov_pub_t(chi, t, ls) = chi[t -> chi(t) - {ls}];
+
+ % 'typed' empty sets
+ empty_LocSet = {};
+ empty_tLoc = lambda t:Top.empty_LocSet;
+ empty_s_TEL = {};
+ empty_s_ALLT = {};
+ empty_z_List = [];
+
+ % verifies if a Loc is NOT part of a set of Locs
+ not_in_tL(L', ls) = !(ls in L');
+
+ % creates a set of triples containing an event ev', a topic t, and all locations contained in L'
+ % stores an event in the publisher's buffer
+ store_ev_in_b(ev', t, L') = {b: t_tel | get_t(b) == t && get_e(b) == ev' && get_l(b) in L'};
+
+ % pops an element of the publisher's buffer (sends an event to a given subscriber)
+ notify_sub(s_TEL', ls) = s_TEL' - {tels:t_tel | get_l(tels) == ls && tels in s_TEL'};
+
+ sSet_ls_in_b(s_TEL', ls) = {tels:t_tel | get_l(tels) == ls && tels in s_TEL'};
+
+ % adds a set containing the action (sub/unsub), the set of locations of all publishers that need to be updated
+ % and the pair of subscriber and topic
+ push_Z(action, L', ls, t) = {allt: q_allt | get_a(allt) == action
+                                             && get_ls(allt) == ls
+                                             && get_t(allt) == t
+                                             &&  get_lp(allt) in L'
+                             };
+
+ % pops an element of the broker's buffer (sends the action to a given publisher)
+ pop_Z(head_z, lp) = head_z - {allt: q_allt | get_lp(allt) == lp && allt in head_z};
+
+ % verifies if it is a sub
+ is_it_sub(head_z) = exists allt: q_allt. get_a(allt) == sub && allt in head_z;
+
+ % checks if the set head_z contains an element containing the parameters provided
+ pendingsubs_at_head(head_z, L', ls, t) = exists allt: q_allt. get_lp(allt) in L'
+                                                               && allt in head_z
+                                                               && get_a(allt) == sub
+                                                               && get_t(allt) == t
+                                                               && get_ls(allt) == ls;
+
+ pendingunsubs_at_head(head_z, L', ls, t) = exists allt: q_allt. get_lp(allt) in L'
+                                                               && allt in head_z
+                                                               && get_a(allt) == unsub
+                                                               && get_t(allt) == t
+                                                               && get_ls(allt) == ls;
+
+ % searches the entire z' list looking for a matching element with the parameters provided
+ % I built these equations without using any of the operations that are listed in the documentation as computationally expensive:
+ %% https://www.mcrl2.org/web/user_manual/language_reference/data.html#lists
+ % checks if there is a sub operation of a given subscriber (ls) and a given topic (t) in the buffer z'
+ sub_in_list(z', L', ls, t) = if( ls == locbrk || (ls in L') || z' == [] || L' == {} || head(z') == {}
+                                 , false
+                                 , if( (tail(z') != [] || head(tail(z')) != {}) && !pendingsubs_at_head(head(z'), L', ls, t)
+                                       , sub_in_list(tail(z'), L', ls, t)
+                                       , pendingsubs_at_head(head(z'), L', ls, t)
+                                 )
+                              );
+ % checks if there is a sub operation of a given subscriber (ls) and a given topic (t) in the buffer z'
+ unsub_in_list(z', L', ls, t) = if( ls == locbrk || (ls in L') || z' == [] || L' == {} || head(z') == {}
+                                , false
+                                , if( (tail(z') != [] || head(tail(z')) != {}) && !pendingunsubs_at_head(head(z'), L', ls, t)
+                                      , unsub_in_list(tail(z'), L', ls, t)
+                                      , pendingunsubs_at_head(head(z'), L', ls, t)
+                                )
+                             );
+
+act
+ sub, subS,  subB: Loc # Top;
+ unsub,unsubS,unsubB: Loc # Top;
+ addpubt,removpubt: Loc # Top;
+ store: Top # Ev;
+ notify: Loc;
+ unsubP, popunsub, sync_unsub: Loc # Top # Loc;
+ subP, popsub, sync_sub: Loc # Top # Loc;
+ popev: Ev;
+
+proc
+
+% Subscriber state:
+%  l - location
+%  psi_l - subscribed topics
+Sub(ls:Loc, psi_l:Set(Top)) =
+ sum t':Top
+ . !(t' in psi_l) ->
+   subS(ls, t')
+     . Sub(ls, psi_l + {t'})
+ +
+ sum t':Top
+   .(t' in psi_l) ->
+     unsubS(ls, t')
+       . Sub(ls, psi_l - {t'})
+;
+
+% Publisher state:
+%   lp - publisher's location
+%   chi - topic referencing the subscribers associated to it
+%   b - list contaning sets of triples of (topic, event, subscriber)
+Pub(lp:Loc, chi: M_tL, b:B, sevs: SEvs) =
+ sum ls:Loc, t': Top
+   . subP(ls, t', lp)
+     . (lp != ls) -> Pub(lp, sub_l(chi, t', ls), b, sevs)
+ +
+ sum ls:Loc, t': Top
+   . (lp != ls) -> unsubP(ls, t', lp)
+     . Pub(lp, unsub_l(chi, t', ls), b, sevs)
+ +
+ sum t': Top, ev': Ev
+   . ((chi(t') != {}) && (ev' in sevs) && (#b < 5)) ->
+     store(t', ev')
+       . Pub(lp, chi, b <| store_ev_in_b(ev', t', chi(t')), sevs - {ev'})
+ +
+ sum ls: Loc
+   . ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (empty_s_TEL != sSet_ls_in_b(head(b), ls)) && (head(b) != empty_s_TEL) && (notify_sub(head(b), ls) != empty_s_TEL) )
+     -> notify(ls) . Pub(lp, chi, [notify_sub(head(b), ls)] ++ tail(b), sevs)
+     <> ( ( (#b != 0) && (ls != lp ) && (ls != locbrk) && (empty_s_TEL != sSet_ls_in_b(head(b), ls)) && (head(b) != empty_s_TEL) && (notify_sub(head(b), ls) == empty_s_TEL) )
+         -> notify(ls) . Pub(lp, chi, tail(b), sevs))
+;
+
+% Broker state:
+%   lb - location of the broker
+%   rho: publishers  (locs) and their topics
+%   sigma: subscribers (locs) and their topics
+%   z: the buffer containing sync updates that need to be sent to the publishers regarding new subs or unsubs
+Brk(lb:Loc, rho: M_tL, sigma: M_tL, z: Z) =
+ sum ls:Loc,t':Top
+   . (!(ls in sigma(t')) && (#z < 5) && not_in_tL(rho(t'), ls) && !(unsub_in_list(z, rho(t'), ls, t')))
+    -> subB(ls,t') . Brk(lb, rho, sub_l(sigma, t', ls), z <| push_Z(sub, rho(t'), ls, t'))
+ +
+ sum ls:Loc,t':Top
+    . ( (ls in sigma(t')) && ( (z == []) || ( (#z < 5) && !(sub_in_list(z, rho(t'), ls, t')) ) ) )
+      -> unsubB(ls,t') . Brk(lb, rho, unsub_l(sigma, t', ls), z <| push_Z(unsub, rho(t'), ls, t') )
+ +
+ sum lp: Loc, ls: Loc, t': Top
+   % a bunch of checks used to ignore unwanted actions in the simulator. it is possible that some of these checks are redundant
+   % the first conditional choice covers the case where the head of the z list is not an empty set yet
+   % the second conditional choice covers the case where the head of the z list is an empty set
+   . ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) &&  (lp != locbrk) && (ls != locbrk) && (c_z(sub, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) != empty_s_ALLT) )
+     -> popsub(ls, t', lp) . Brk(lb, rho, sigma,  [pop_Z(head(z), lp)] ++ tail(z))
+     <> ( ( (z != []) && (#z != 0) && is_it_sub(head(z)) &&  (lp in rho(t')) && (lp != locbrk) && (ls != locbrk) && (c_z(sub, lp, ls, t') in head(z)) && (lp != ls) && (pop_Z(head(z), lp) == empty_s_ALLT) )
+       -> popsub(ls, t', lp).Brk(lb, rho, sigma,  tail(z)) )
+ +
+ sum lp: Loc, ls: Loc, t': Top
+   % a bunch of checks used to ignore unwanted actions in the simulator. it is possible that some of these checks are redundant
+   % the first conditional choice covers the case where the head of the z list is not an empty set yet
+   % the second conditional choice covers the case where the head of the z list is an empty set
+   . ( (z != []) && (#z != 0) && (lp in rho(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(unsub, lp, ls, t') in head(z)) && !(is_it_sub(head(z))) && (pop_Z(head(z), lp) != empty_s_ALLT) )
+     -> popunsub(ls, t', lp) . Brk(lb, rho, sigma, [pop_Z(head(z), lp)] ++ tail(z))
+     <> ( ( (z != []) && (#z != 0) && (lp in rho(t')) && (lp != locbrk) && (ls != locbrk) && (lp != ls) && (c_z(unsub, lp, ls, t') in head(z)) && !(is_it_sub(head(z))) && (pop_Z(head(z), lp) == empty_s_ALLT) )
+        -> popunsub(ls, t', lp) . Brk(lb, rho, sigma, tail(z)) )
+;
+
+Prog =
+ allow( {sub, unsub, store, notify, sync_sub, sync_unsub},
+   comm( {subS|subB -> sub, popsub|subP -> sync_sub, popunsub|unsubP -> sync_unsub, unsubS|unsubB -> unsub},
+     Sub(s1, {}) ||
+     Sub(s2, {}) ||
+     %Pub(p1, empty_tLoc, [], {ev2}) ||
+     Pub(p2, empty_tLoc, [], {ev2}) ||
+     Brk(locbrk, empty_tLoc[top1 -> {p2}][top2 -> {p2}], empty_tLoc, [])
+   )
+ )
+;
+
+%%%%%%%
+init
+ Prog;
