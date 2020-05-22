@@ -1,3 +1,3 @@
 %[sub(locbrk,top2)] <true*> false && [sub(locbrk,top1)] <true*> false
 %[true*.subS(locbrk,top2)] false
-[subS(locbrk,top2)] false
+[true*.subS(locbrk,top2).true*] true
