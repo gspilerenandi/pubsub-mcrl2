@@ -1,3 +1,23 @@
-%[sub(locbrk,top2)] <true*> false && [sub(locbrk,top1)] <true*> false
-%[true*.subS(locbrk,top2)] false
-[true*.subS(locbrk,top2).true*] true
+% [m] false   --> impossível "m"
+% <m> true    --> possível "m"
+% <m> false   --> sempre false
+% [m] true    --> sempre true
+
+%%
+%   <sub(s1,top2).sync_sub(s1,top2,p1) + sub(s1,top2).sync_sub(s1,top2,p2)> true
+
+%%  impossible for the broker to subscribe to anything
+%%% output: true
+%   [true*.sub(locbrk,top2)] false
+
+%%  impossible to perform an unsub of a pair of ls and t that never subscriber beforehand
+%%% output: true
+%  [!sub(s1,top2)*.unsub(s1,top2)] false
+%%% output: false
+%  <sub(locbrk,top2).unsub(locbrk,top2)> true
+
+%%two consecutive subs on the same pair of sub and top are impossible to happen
+%%% output: true
+%forall s':Loc, top':Top.[sub(s',top').sub(s',top')] false
+%%% output: true
+%[sub(s1,top2).sub(s1,top2)] false
