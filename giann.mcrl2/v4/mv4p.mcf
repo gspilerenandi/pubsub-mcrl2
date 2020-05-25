@@ -21,3 +21,5 @@
 %forall s':Loc, top':Top.[sub(s',top').sub(s',top')] false
 %%% output: true
 %[sub(s1,top2).sub(s1,top2)] false
+
+[!sync_sub(s1, top2, p1)*.store(top2, ev2)] false
