@@ -2,7 +2,7 @@ sort
 
  % fixed set of locations and topics
  % locations are denoted by Loc
- Loc = struct s1 | p1 | p2 | locbrk;
+ Loc = struct s1 | p1 | locbrk;
  % topics are denoted by Top
  Top = struct top2;
  % events used in the system
@@ -243,8 +243,8 @@ Prog =
      Sub(s1, {}) ||
      %Sub(s2, {}) ||
      Pub(p1, empty_tLoc, [], {ev2}) ||
-     Pub(p2, empty_tLoc, [], {ev2}) ||
-     Brk(locbrk, empty_tLoc[top2 -> {p1,p2}], empty_tLoc, [])
+     %Pub(p2, empty_tLoc, [], {ev2}) ||
+     Brk(locbrk, empty_tLoc[top2 -> {p1}], empty_tLoc, [])
    )
  )
 ;

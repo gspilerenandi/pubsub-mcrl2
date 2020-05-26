@@ -22,4 +22,8 @@
 %%% output: true
 %[sub(s1,top2).sub(s1,top2)] false
 
-[!sync_sub(s1, top2, p1)*.store(top2, ev2)] false
+%% an "store" of a topic should not occur without a previous "sync_sub" on the given topics
+%% in other words, there has to be someone subscribed to the topic before an "store" can occur
+%[!sync_sub(s1, top2, p1)*.store(top2, ev2)] false
+
+%% a publisher should not be able to "store" events on subscribers that are not subscribed anymore
