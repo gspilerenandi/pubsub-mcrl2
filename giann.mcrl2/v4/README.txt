@@ -8,7 +8,7 @@ There are two models in the v4 folder, mv4 and mv4small:
               one publisher (p1), the broker (locbrk), one topic (top2), and one event (ev2).
 
 
-# TERMINAL INSTRUCTIONS
+# TOOLS INSTRUCTIONS
 After moving to the v4 folder directory, you can perform the following actions depending on what
 you need to do. Substitute <M> for either mv4 or mv4small bellow depending on which one you
 intend to use. I've used *, **, and *** to progressively identify the operations that can take
@@ -47,4 +47,3 @@ and how to use the correct mCRL2 tools for each file.
 
       ltsgraph: displays a graph representation of the system. Can also be used to display a
                 counter example (<M>_evi.lts). Takes .lts files as input.
-          
