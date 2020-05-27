@@ -1,29 +1,54 @@
-% [m] false   --> impossível "m"
-% <m> true    --> possível "m"
-% <m> false   --> sempre false
-% [m] true    --> sempre true
+% -----------------------------------------------------------------
+%%                    LOOKUP REFERENCE TABLE                     %%
+% -----------------------------------------------------------------
+% [m] false --> impossible "m"      |     <m> true --> possible "m"
+% <m> false --> always false        |     [m] true --> always true
 
-%%
-%   <sub(s1,top2).sync_sub(s1,top2,p1) + sub(s1,top2).sync_sub(s1,top2,p2)> true
+% <a> (b) true: it is possible to do an a step followed by a b step,
+%               alternatively, on can say an a step is possible to
+%               a state in which b is enabled;
 
-%%  impossible for the broker to subscribe to anything
-%%% output: true
+% <a>(<b> true V <c> true): an a step is possible to a state in which
+%                           either a b or a c action is enabled;
+% [a]<b> true: after every a step a b is enabled (although an a need
+%             not be enabled in the intial state);
+% [a] false: whenever an a is done, a state is reached in which false
+%            is valid. This only holds whenever no a can be done.
+
+
+% -----------------------------------------------------------------
+%% UNCOMMENT, ONE AT A TIME, THE PROPERTY THAT YOU WANT TO CHECK %%
+% -----------------------------------------------------------------
+
+%% P1 descripton: no deadlock
+%% P1 output: true
+%[true*] <true*> true
+
+%% P2 descripton: impossible for the broker to subscribe to anything
+%% P2 output: true
 %   [true*.sub(locbrk,top2)] false
 
-%%  impossible to perform an unsub of a pair of ls and t that never subscriber beforehand
-%%% output: true
+%%  P3 descripton: impossible to perform an unsub of a pair of ls and
+%%                 top that neversubscriber beforehand.
+%%  P3.1 output: true
 %  [!sub(s1,top2)*.unsub(s1,top2)] false
-%%% output: false
+%%  P3.2 output: false
 %  <sub(locbrk,top2).unsub(locbrk,top2)> true
 
-%%two consecutive subs on the same pair of sub and top are impossible to happen
-%%% output: true
-%forall s':Loc, top':Top.[sub(s',top').sub(s',top')] false
-%%% output: true
-%[sub(s1,top2).sub(s1,top2)] false
+%% P4 descripton: two consecutive subs on the same pair of sub and
+%%                top are impossible to happen
+%% P4 output: true
+% forall s':Loc, top':Top.[sub(s',top').sub(s',top')] false
+%% P4 output: true
+% [sub(s1,top2).sub(s1,top2)] false
 
-%% an "store" of a topic should not occur without a previous "sync_sub" on the given topics
-%% in other words, there has to be someone subscribed to the topic before an "store" can occur
-%[!sync_sub(s1, top2, p1)*.store(top2, ev2)] false
+%% P5 descripton: an "store" of a topic should not occur without a
+%%                previous "sync_sub" on the given topics in other
+%%                words, there has to be someone subscribed to the
+%%                topic before an "store" can occur
+%% P5 output: true
+% [sub(s1,top1).!sync_sub(s1, top1, p1)*.store(top1, ev)] false
 
-%% a publisher should not be able to "store" events on subscribers that are not subscribed anymore
+%% P6 descripton: a publisher should not be able to "store" events on
+%%                subscribers that are not subscribed anymore
+%% P6 output:
