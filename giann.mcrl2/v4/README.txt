@@ -24,7 +24,7 @@ the longest to be completed.
 
                               lps2lts -v <M>.lps <M>.lts
 
-  3* - using the generated lts to apply a property previously defined on a .mcf file.
+  3** - using the generated lts to apply a property previously defined on a .mcf file.
 
                               lts2pbes -c <M>.lts -f mv4p.mcf <M>.pbes
 

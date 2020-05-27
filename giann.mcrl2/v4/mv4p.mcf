@@ -51,4 +51,9 @@
 
 %% P6 descripton: a publisher should not be able to "store" events on
 %%                subscribers that are not subscribed anymore
-%% P6 output:
+%% P6 output: still to be worked on
+[sub(s1,top1).sync_sub(s1, top1, p1).!store(top1, ev)*.unsub(s1,top1).sync_unsub(s1, top1, p1)] <!sub(s1,top1).!sync_sub(s1, top1, p1).store(top1, ev)> true
+
+%% P7 descripton: the notification of events should follow the order
+%%                in which they were stored
+%% P7 output:
